@@ -1,28 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-} from 'react-native';
+import { StyleSheet, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system';
+import { Text, Card, Button } from 'react-native-paper';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { getFullExportData } from '../database/db';
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import { ACTIVITY_LABEL } from '../components/ActivityList';
-
-const C = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  accent: '#4cc9f0',
-  text: '#e0e0e0',
-  muted: '#777',
-  border: '#2d2d4e',
-};
+import { C } from '../theme';
 
 function escape(v) {
   return `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -72,12 +58,12 @@ function buildCSV(data) {
           pushRow(actLabel, dur, ex.name, '', '', '', act.notes || log.notes || '');
           continue;
         }
-        for (const s of ex.sets) {
+        for (const sset of ex.sets) {
           pushRow(
             actLabel, dur, ex.name,
-            s.set_number,
-            s.weight_kg ?? '',
-            s.reps ?? '',
+            sset.set_number,
+            sset.weight_kg ?? '',
+            sset.reps ?? '',
             act.notes || log.notes || ''
           );
         }
@@ -143,47 +129,61 @@ export default function ExportScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={s.content}>
 
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Export to CSV</Text>
-          <Text style={s.cardDesc}>
-            One row per set. Includes date, pain, symptoms, activities with
-            exercise/weight/reps and notes. Opens directly in Excel — special
-            characters work correctly (UTF-8 BOM).
-          </Text>
-          <TouchableOpacity style={s.btn} onPress={exportCSV} disabled={busy}>
-            <Text style={s.btnText}>{busy ? 'Exporting…' : 'Export CSV'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Backup (JSON)</Text>
-          <Text style={s.cardDesc}>
-            Complete backup of all data. Can be used to restore when needed
-            or opened in another program.
-          </Text>
-          <TouchableOpacity
-            style={[s.btn, s.btnSecondary]}
-            onPress={exportJSON}
-            disabled={busy}
-          >
-            <Text style={[s.btnText, { color: C.accent }]}>
-              {busy ? 'Exporting…' : 'Export JSON backup'}
+        <Card mode="elevated" elevation={2} style={s.card}>
+          <Card.Content>
+            <Text variant="titleMedium" style={s.cardTitle}>Export to CSV</Text>
+            <Text style={s.cardDesc}>
+              One row per set. Includes date, pain, symptoms, activities with
+              exercise/weight/reps and notes. Opens directly in Excel — special
+              characters work correctly (UTF-8 BOM).
             </Text>
-          </TouchableOpacity>
-        </View>
+            <Button
+              mode="contained"
+              icon="file-delimited-outline"
+              onPress={exportCSV}
+              disabled={busy}
+              loading={busy}
+              contentStyle={{ paddingVertical: 6 }}
+            >
+              {busy ? 'Exporting…' : 'Export CSV'}
+            </Button>
+          </Card.Content>
+        </Card>
 
-        <View style={s.infoCard}>
-          <Text style={s.infoTitle}>About data storage</Text>
-          <Text style={s.infoText}>
-            All data is stored exclusively on your phone via SQLite.
-            No data is sent to the internet. History is not deleted on app
-            updates. Take regular backups to protect your data against
-            uninstalling the app.
-          </Text>
-        </View>
+        <Card mode="elevated" elevation={2} style={s.card}>
+          <Card.Content>
+            <Text variant="titleMedium" style={s.cardTitle}>Backup (JSON)</Text>
+            <Text style={s.cardDesc}>
+              Complete backup of all data. Can be used to restore when needed
+              or opened in another program.
+            </Text>
+            <Button
+              mode="outlined"
+              icon="code-json"
+              onPress={exportJSON}
+              disabled={busy}
+              loading={busy}
+              contentStyle={{ paddingVertical: 6 }}
+            >
+              {busy ? 'Exporting…' : 'Export JSON backup'}
+            </Button>
+          </Card.Content>
+        </Card>
+
+        <Card mode="contained" style={s.infoCard}>
+          <Card.Content>
+            <Text variant="titleSmall" style={s.infoTitle}>About data storage</Text>
+            <Text style={s.infoText}>
+              All data is stored exclusively on your phone via SQLite.
+              No data is sent to the internet. History is not deleted on app
+              updates. Take regular backups to protect your data against
+              uninstalling the app.
+            </Text>
+          </Card.Content>
+        </Card>
 
       </ScrollView>
     </SafeAreaView>
@@ -193,36 +193,10 @@ export default function ExportScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   content: { padding: 16, paddingBottom: 48 },
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  cardTitle: { color: C.text, fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  card: { marginBottom: 12 },
+  cardTitle: { color: C.text, fontWeight: '700', marginBottom: 8 },
   cardDesc: { color: C.muted, fontSize: 14, lineHeight: 20, marginBottom: 16 },
-  btn: {
-    backgroundColor: C.accent,
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-  },
-  btnSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: C.accent,
-  },
-  btnText: { color: '#000', fontSize: 15, fontWeight: '700' },
-  infoCard: {
-    backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#3a3a5c',
-    opacity: 0.85,
-  },
-  infoTitle: { color: C.accent, fontSize: 14, fontWeight: '700', marginBottom: 8 },
+  infoCard: { backgroundColor: C.inner },
+  infoTitle: { color: C.accent, fontWeight: '700', marginBottom: 8 },
   infoText: { color: C.muted, fontSize: 13, lineHeight: 20 },
 });

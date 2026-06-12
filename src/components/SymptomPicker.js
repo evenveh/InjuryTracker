@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Chip } from 'react-native-paper';
 
 export const SYMPTOM_OPTIONS = [
   { key: 'morning',         label: 'Morning stiffness' },
@@ -29,16 +30,16 @@ export default function SymptomPicker({ selected, onChange }) {
       {SYMPTOM_OPTIONS.map(({ key, label }) => {
         const active = selected.includes(key);
         return (
-          <TouchableOpacity
+          <Chip
             key={key}
+            selected={active}
+            showSelectedOverlay
             onPress={() => toggle(key)}
-            style={[styles.chip, active && styles.chipActive]}
-            activeOpacity={0.7}
+            style={styles.chip}
+            compact
           >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>
-              {label}
-            </Text>
-          </TouchableOpacity>
+            {label}
+          </Chip>
         );
       })}
     </View>
@@ -52,23 +53,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#2d2d4e',
-    backgroundColor: '#13131f',
-  },
-  chipActive: {
-    backgroundColor: '#4cc9f0',
-    borderColor: '#4cc9f0',
-  },
-  chipText: {
-    color: '#777',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: '#000',
-    fontWeight: '700',
+    marginBottom: 2,
   },
 });

@@ -1,16 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, Card, Button, TextInput } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 
 import {
@@ -24,15 +22,7 @@ import {
 import PainSelector from '../components/PainSelector';
 import SymptomPicker, { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import ActivityList, { ACTIVITY_LABEL } from '../components/ActivityList';
-
-const C = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  accent: '#4cc9f0',
-  text: '#e0e0e0',
-  muted: '#777',
-  border: '#2d2d4e',
-};
+import { C, getPainColor } from '../theme';
 
 function todayStr() {
   return new Date().toISOString().split('T')[0];
@@ -54,12 +44,15 @@ function formatDate(dateStr) {
   });
 }
 
-function getPainColor(level) {
-  const colors = [
-    '#22c55e','#4ade80','#86efac','#fbbf24','#fb923c',
-    '#f97316','#f87171','#ef4444','#dc2626','#b91c1c','#7f1d1d',
-  ];
-  return colors[Math.min(level, 10)];
+function SectionCard({ title, children, style }) {
+  return (
+    <Card mode="elevated" style={[s.card, style]} elevation={2}>
+      <Card.Content>
+        <Text variant="labelSmall" style={s.sectionLabel}>{title}</Text>
+        {children}
+      </Card.Content>
+    </Card>
+  );
 }
 
 export default function TodayScreen() {
@@ -110,28 +103,22 @@ export default function TodayScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <SafeAreaView style={s.container}>
+      <SafeAreaView style={s.container} edges={['left', 'right']}>
         <ScrollView
           contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={s.dateHeader}>{formatDate(today)}</Text>
+          <Text variant="titleMedium" style={s.dateHeader}>{formatDate(today)}</Text>
 
-          {/* Pain */}
-          <View style={s.card}>
-            <Text style={s.sectionLabel}>Pain today</Text>
+          <SectionCard title="PAIN TODAY">
             <PainSelector value={painLevel} onChange={mark(setPainLevel)} />
-          </View>
+          </SectionCard>
 
-          {/* Symptoms */}
-          <View style={s.card}>
-            <Text style={s.sectionLabel}>Symptoms</Text>
+          <SectionCard title="SYMPTOMS">
             <SymptomPicker selected={symptoms} onChange={mark(setSymptoms)} />
-          </View>
+          </SectionCard>
 
-          {/* Activities */}
-          <View style={s.card}>
-            <Text style={s.sectionLabel}>Activities</Text>
+          <SectionCard title="ACTIVITIES">
             {log && (
               <ActivityList
                 activities={activities}
@@ -139,70 +126,69 @@ export default function TodayScreen() {
                 onChange={refreshActivities}
               />
             )}
-          </View>
+          </SectionCard>
 
-          {/* Notes */}
-          <View style={s.card}>
-            <Text style={s.sectionLabel}>Notes</Text>
+          <SectionCard title="NOTES">
             <TextInput
+              mode="outlined"
               style={s.notes}
               value={notes}
               onChangeText={mark(setNotes)}
               placeholder="Write notes here…"
-              placeholderTextColor={C.muted}
               multiline
-              textAlignVertical="top"
             />
-          </View>
+          </SectionCard>
 
-          {/* Save */}
-          <TouchableOpacity
-            style={[s.saveBtn, dirty && s.saveBtnDirty]}
+          <Button
+            mode="contained"
+            icon={dirty ? 'content-save' : 'check'}
             onPress={handleSave}
-            activeOpacity={0.8}
+            disabled={!dirty}
+            style={s.saveBtn}
+            contentStyle={{ paddingVertical: 6 }}
           >
-            <Text style={[s.saveBtnText, dirty && { color: '#000' }]}>
-              {dirty ? 'Save changes' : 'Saved'}
-            </Text>
-          </TouchableOpacity>
+            {dirty ? 'Save changes' : 'Saved'}
+          </Button>
 
-          {/* Yesterday context */}
           {yesterdayLog && (
-            <View style={[s.card, s.yesterdayCard]}>
-              <Text style={s.sectionLabel}>YESTERDAY — pain can show up the next day</Text>
-
-              <View style={s.yesterdayRow}>
-                <View
-                  style={[
-                    s.painDot,
-                    { backgroundColor: getPainColor(yesterdayLog.pain_level) },
-                  ]}
-                >
-                  <Text style={s.painDotText}>{yesterdayLog.pain_level}</Text>
+            <Card mode="contained" style={s.yesterdayCard}>
+              <Card.Content>
+                <Text variant="labelSmall" style={s.sectionLabel}>
+                  YESTERDAY — pain can show up the next day
+                </Text>
+                <View style={s.yesterdayRow}>
+                  <View
+                    style={[
+                      s.painDot,
+                      { backgroundColor: getPainColor(yesterdayLog.pain_level) },
+                    ]}
+                  >
+                    <Text style={s.painDotText}>{yesterdayLog.pain_level}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    {yesterdayLog.activities?.length > 0 && (
+                      <Text style={s.ydActivity}>
+                        {yesterdayLog.activities
+                          .map((a) => ACTIVITY_LABEL[a.type] || a.type)
+                          .join(', ')}
+                      </Text>
+                    )}
+                    {yesterdayLog.symptoms?.length > 0 && (
+                      <Text style={s.ydSymptoms}>
+                        {yesterdayLog.symptoms
+                          .map((k) => SYMPTOM_LABELS[k] || k)
+                          .join(', ')}
+                      </Text>
+                    )}
+                    {yesterdayLog.notes ? (
+                      <Text style={s.ydNotes} numberOfLines={2}>
+                        {yesterdayLog.notes}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  {yesterdayLog.activities?.length > 0 && (
-                    <Text style={s.ydActivity}>
-                      {yesterdayLog.activities
-                        .map((a) => ACTIVITY_LABEL[a.type] || a.type)
-                        .join(', ')}
-                    </Text>
-                  )}
-                  {yesterdayLog.symptoms?.length > 0 && (
-                    <Text style={s.ydSymptoms}>
-                      {yesterdayLog.symptoms
-                        .map((k) => SYMPTOM_LABELS[k] || k)
-                        .join(', ')}
-                    </Text>
-                  )}
-                  {yesterdayLog.notes ? (
-                    <Text style={s.ydNotes} numberOfLines={2}>
-                      {yesterdayLog.notes}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            </View>
+              </Card.Content>
+            </Card>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -215,43 +201,21 @@ const s = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 48 },
   dateHeader: {
     color: C.accent,
-    fontSize: 18,
     fontWeight: '700',
     textTransform: 'capitalize',
     marginBottom: 16,
   },
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+  card: { marginBottom: 12 },
   sectionLabel: {
     color: C.muted,
-    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     marginBottom: 14,
   },
-  notes: {
-    color: C.text,
-    fontSize: 15,
-    minHeight: 80,
-    lineHeight: 22,
-  },
-  saveBtn: {
-    backgroundColor: C.border,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  saveBtnDirty: { backgroundColor: C.accent },
-  saveBtnText: { color: C.muted, fontSize: 16, fontWeight: '700' },
-  yesterdayCard: { opacity: 0.8, borderColor: '#3a3a5c' },
+  notes: { backgroundColor: C.inner, minHeight: 80 },
+  saveBtn: { marginBottom: 16, borderRadius: 12 },
+  yesterdayCard: { backgroundColor: C.inner, opacity: 0.92 },
   yesterdayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   painDot: {
     width: 36,

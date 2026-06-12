@@ -1,48 +1,48 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
-  Modal,
-  TextInput,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import {
+  Text,
+  Button,
+  IconButton,
+  TextInput,
+  Chip,
+  Card,
+  Portal,
+  Modal,
+  Divider,
+} from 'react-native-paper';
+import {
   createActivity,
   createExercise,
   createExerciseSet,
   removeActivity,
-  getActivitiesForLog,
 } from '../database/db';
-
-const C = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  inner: '#13131f',
-  accent: '#4cc9f0',
-  text: '#e0e0e0',
-  muted: '#777',
-  border: '#2d2d4e',
-  danger: '#ef4444',
-};
+import { C } from '../theme';
 
 export const ACTIVITY_TYPES = [
-  { key: 'styrke',   label: '🏋️  Strength' },
-  { key: 'sykling',  label: '🚴  Cycling' },
-  { key: 'staking',  label: '⛷️  Ski erg / Poling' },
-  { key: 'svomming', label: '🏊  Swimming' },
-  { key: 'tur',      label: '🚶  Walk' },
-  { key: 'ellipse',  label: '🔄  Elliptical' },
-  { key: 'lopning',  label: '🏃  Running' },
-  { key: 'annet',    label: '⚡  Other' },
+  { key: 'styrke',   label: 'Strength',          icon: 'dumbbell' },
+  { key: 'sykling',  label: 'Cycling',           icon: 'bike' },
+  { key: 'staking',  label: 'Ski erg / Poling',  icon: 'ski' },
+  { key: 'svomming', label: 'Swimming',          icon: 'swim' },
+  { key: 'tur',      label: 'Walk',              icon: 'walk' },
+  { key: 'ellipse',  label: 'Elliptical',        icon: 'orbit' },
+  { key: 'lopning',  label: 'Running',           icon: 'run' },
+  { key: 'annet',    label: 'Other',             icon: 'flash' },
 ];
 
 export const ACTIVITY_LABEL = Object.fromEntries(
   ACTIVITY_TYPES.map(({ key, label }) => [key, label])
+);
+
+export const ACTIVITY_ICON = Object.fromEntries(
+  ACTIVITY_TYPES.map(({ key, icon }) => [key, icon])
 );
 
 // ─── Add-activity modal ────────────────────────────────────────────────────────
@@ -114,78 +114,79 @@ function AddModal({ visible, onClose, onSaved }) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={close}
+        contentContainerStyle={m.sheet}
       >
-        <View style={m.overlay}>
-          <View style={m.sheet}>
-            {/* Header */}
-            <View style={m.header}>
-              <Text style={m.title}>Add activity</Text>
-              <TouchableOpacity onPress={close} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Text style={{ color: C.muted, fontSize: 22 }}>✕</Text>
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={m.header}>
+            <Text variant="titleLarge" style={m.title}>Add activity</Text>
+            <IconButton icon="close" size={22} onPress={close} />
+          </View>
+          <Divider />
+
+          <ScrollView
+            style={m.body}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 24 }}
+          >
+            {/* Type */}
+            <Text variant="labelLarge" style={m.label}>Type</Text>
+            <View style={m.typeGrid}>
+              {ACTIVITY_TYPES.map(({ key, label, icon }) => (
+                <Chip
+                  key={key}
+                  icon={icon}
+                  selected={type === key}
+                  showSelectedOverlay
+                  onPress={() => setType(key)}
+                >
+                  {label}
+                </Chip>
+              ))}
             </View>
 
-            <ScrollView
-              style={m.body}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: 32 }}
-            >
-              {/* Type */}
-              <Text style={m.label}>Type</Text>
-              <View style={m.typeGrid}>
-                {ACTIVITY_TYPES.map(({ key, label }) => (
-                  <TouchableOpacity
-                    key={key}
-                    style={[m.typeChip, type === key && m.typeChipActive]}
-                    onPress={() => setType(key)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[m.typeChipText, type === key && m.typeChipTextActive]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            {/* Duration */}
+            {type && (
+              <TextInput
+                mode="outlined"
+                label="Duration (min)"
+                style={m.input}
+                value={duration}
+                onChangeText={setDuration}
+                keyboardType="numeric"
+                placeholder="e.g. 60"
+                dense
+              />
+            )}
 
-              {/* Duration */}
-              {type && (
-                <>
-                  <Text style={m.label}>Duration (min)</Text>
-                  <TextInput
-                    style={m.input}
-                    value={duration}
-                    onChangeText={setDuration}
-                    keyboardType="numeric"
-                    placeholder="e.g. 60"
-                    placeholderTextColor={C.muted}
-                  />
-                </>
-              )}
-
-              {/* Exercises (styrke only) */}
-              {type === 'styrke' && (
-                <>
-                  <Text style={m.label}>Exercises</Text>
-                  {exercises.map((ex, exIdx) => (
-                    <View key={exIdx} style={m.exCard}>
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            {/* Exercises (styrke only) */}
+            {type === 'styrke' && (
+              <>
+                <Text variant="labelLarge" style={m.label}>Exercises</Text>
+                {exercises.map((ex, exIdx) => (
+                  <Card key={exIdx} mode="contained" style={m.exCard}>
+                    <Card.Content>
+                      <View style={m.exNameRow}>
                         <TextInput
-                          style={[m.input, { flex: 1, marginBottom: 0 }]}
+                          mode="outlined"
+                          label="Exercise"
+                          style={{ flex: 1 }}
                           value={ex.name}
                           onChangeText={(v) => setExName(exIdx, v)}
-                          placeholder="Exercise (e.g. Deadlift)"
-                          placeholderTextColor={C.muted}
+                          placeholder="e.g. Deadlift"
+                          dense
                         />
-                        <TouchableOpacity
+                        <IconButton
+                          icon="delete-outline"
+                          iconColor={C.danger}
+                          size={22}
                           onPress={() => removeExercise(exIdx)}
-                          style={m.iconBtn}
-                        >
-                          <Text style={{ color: C.danger, fontSize: 18 }}>✕</Text>
-                        </TouchableOpacity>
+                        />
                       </View>
 
                       {/* Sets header */}
@@ -193,74 +194,91 @@ function AddModal({ visible, onClose, onSaved }) {
                         <Text style={[m.setCell, m.setHeader]}>Set</Text>
                         <Text style={[m.setCell, m.setHeader]}>Kg</Text>
                         <Text style={[m.setCell, m.setHeader]}>Reps</Text>
-                        <View style={{ width: 28 }} />
+                        <View style={{ width: 40 }} />
                       </View>
 
                       {ex.sets.map((s, si) => (
                         <View key={si} style={m.setsRow}>
                           <Text style={[m.setCell, { color: C.muted }]}>{si + 1}</Text>
                           <TextInput
+                            mode="outlined"
                             style={[m.setInput, m.setCell]}
                             value={s.weight}
                             onChangeText={(v) => editSet(exIdx, si, 'weight', v)}
                             keyboardType="decimal-pad"
                             placeholder="0"
-                            placeholderTextColor={C.muted}
+                            dense
                           />
                           <TextInput
+                            mode="outlined"
                             style={[m.setInput, m.setCell]}
                             value={s.reps}
                             onChangeText={(v) => editSet(exIdx, si, 'reps', v)}
                             keyboardType="numeric"
                             placeholder="0"
-                            placeholderTextColor={C.muted}
+                            dense
                           />
-                          <TouchableOpacity onPress={() => removeSet(exIdx, si)}>
-                            <Text style={{ color: C.danger, width: 28, textAlign: 'center' }}>−</Text>
-                          </TouchableOpacity>
+                          <IconButton
+                            icon="minus"
+                            size={18}
+                            iconColor={C.danger}
+                            onPress={() => removeSet(exIdx, si)}
+                            style={{ width: 40, margin: 0 }}
+                          />
                         </View>
                       ))}
 
-                      <TouchableOpacity
-                        style={m.addSetBtn}
+                      <Button
+                        compact
+                        icon="plus"
                         onPress={() => addSet(exIdx)}
+                        style={m.addSetBtn}
                       >
-                        <Text style={{ color: C.accent, fontSize: 13 }}>+ Add set</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                        Add set
+                      </Button>
+                    </Card.Content>
+                  </Card>
+                ))}
 
-                  <TouchableOpacity style={m.addExBtn} onPress={addExercise}>
-                    <Text style={{ color: C.accent, fontWeight: '700' }}>+ Add exercise</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+                <Button
+                  mode="outlined"
+                  icon="plus"
+                  onPress={addExercise}
+                  style={m.addExBtn}
+                >
+                  Add exercise
+                </Button>
+              </>
+            )}
 
-              {/* Notes */}
-              {type && (
-                <>
-                  <Text style={m.label}>Notes</Text>
-                  <TextInput
-                    style={[m.input, { minHeight: 56, textAlignVertical: 'top' }]}
-                    value={notes}
-                    onChangeText={setNotes}
-                    placeholder="Comments..."
-                    placeholderTextColor={C.muted}
-                    multiline
-                  />
-                </>
-              )}
+            {/* Notes */}
+            {type && (
+              <TextInput
+                mode="outlined"
+                label="Notes"
+                style={m.input}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Comments..."
+                multiline
+              />
+            )}
 
-              {type && (
-                <TouchableOpacity style={m.saveBtn} onPress={handleSave}>
-                  <Text style={m.saveBtnText}>Save activity</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+            {type && (
+              <Button
+                mode="contained"
+                icon="check"
+                onPress={handleSave}
+                style={m.saveBtn}
+                contentStyle={{ paddingVertical: 6 }}
+              >
+                Save activity
+              </Button>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+    </Portal>
   );
 }
 
@@ -322,26 +340,44 @@ export default function ActivityList({ activities, logId, onChange }) {
   return (
     <View>
       {activities.map((act) => (
-        <View key={act.id} style={s.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.actType}>
-              {ACTIVITY_LABEL[act.type] || act.type}
-              {act.duration_min ? `  ·  ${act.duration_min} min` : ''}
-            </Text>
-            {act.type === 'styrke' && exerciseSummary(act) ? (
-              <Text style={s.exSummary}>{exerciseSummary(act)}</Text>
-            ) : null}
-            {act.notes ? <Text style={s.actNotes}>{act.notes}</Text> : null}
-          </View>
-          <TouchableOpacity onPress={() => confirmDelete(act.id)} style={s.deleteBtn}>
-            <Text style={{ color: C.danger, fontSize: 16 }}>🗑</Text>
-          </TouchableOpacity>
-        </View>
+        <Card key={act.id} mode="contained" style={s.row}>
+          <Card.Title
+            title={
+              ACTIVITY_LABEL[act.type] +
+              (act.duration_min ? `  ·  ${act.duration_min} min` : '')
+            }
+            titleVariant="titleSmall"
+            left={(props) => (
+              <IconButton {...props} icon={ACTIVITY_ICON[act.type] || 'flash'} size={22} />
+            )}
+            right={(props) => (
+              <IconButton
+                {...props}
+                icon="delete-outline"
+                iconColor={C.danger}
+                onPress={() => confirmDelete(act.id)}
+              />
+            )}
+          />
+          {(exerciseSummary(act) || act.notes) ? (
+            <Card.Content style={s.rowBody}>
+              {act.type === 'styrke' && exerciseSummary(act) ? (
+                <Text style={s.exSummary}>{exerciseSummary(act)}</Text>
+              ) : null}
+              {act.notes ? <Text style={s.actNotes}>{act.notes}</Text> : null}
+            </Card.Content>
+          ) : null}
+        </Card>
       ))}
 
-      <TouchableOpacity style={s.addBtn} onPress={() => setShowModal(true)}>
-        <Text style={s.addBtnText}>+ Add activity</Text>
-      </TouchableOpacity>
+      <Button
+        mode="outlined"
+        icon="plus"
+        onPress={() => setShowModal(true)}
+        style={s.addBtn}
+      >
+        Add activity
+      </Button>
 
       <AddModal
         visible={showModal}
@@ -356,128 +392,53 @@ export default function ActivityList({ activities, logId, onChange }) {
 
 const s = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: C.inner,
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: C.border,
+    backgroundColor: C.inner,
   },
-  actType: { color: C.text, fontSize: 14, fontWeight: '700' },
-  exSummary: { color: C.muted, fontSize: 12, marginTop: 4, lineHeight: 18 },
+  rowBody: { paddingTop: 0, paddingBottom: 12, marginTop: -8 },
+  exSummary: { color: C.muted, fontSize: 12, lineHeight: 18 },
   actNotes: { color: C.muted, fontSize: 12, marginTop: 2, fontStyle: 'italic' },
-  deleteBtn: { padding: 4, marginLeft: 8 },
-  addBtn: {
-    borderWidth: 1,
-    borderColor: C.accent,
-    borderRadius: 8,
-    borderStyle: 'dashed',
-    padding: 12,
-    alignItems: 'center',
-  },
-  addBtnText: { color: C.accent, fontSize: 14, fontWeight: '700' },
+  addBtn: { marginTop: 4 },
 });
 
 const m = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'flex-end',
-  },
   sheet: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    marginHorizontal: 12,
+    borderRadius: 20,
     maxHeight: '92%',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingLeft: 20,
+    paddingRight: 8,
+    paddingVertical: 8,
   },
-  title: { color: C.text, fontSize: 18, fontWeight: '700' },
-  body: { padding: 16 },
+  title: { fontWeight: '700' },
+  body: { paddingHorizontal: 16, paddingTop: 8 },
   label: {
     color: C.muted,
-    fontSize: 11,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    marginBottom: 8,
+    marginBottom: 10,
     marginTop: 16,
   },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  typeChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.inner,
-  },
-  typeChipActive: { backgroundColor: C.accent, borderColor: C.accent },
-  typeChipText: { color: C.muted, fontSize: 13 },
-  typeChipTextActive: { color: '#000', fontWeight: '700' },
-  input: {
-    backgroundColor: C.inner,
-    borderRadius: 8,
-    padding: 12,
-    color: C.text,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginBottom: 8,
-  },
-  exCard: {
-    backgroundColor: C.bg,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  iconBtn: { padding: 10, justifyContent: 'center' },
-  setsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
+  input: { marginTop: 16, backgroundColor: C.inner },
+  exCard: { marginBottom: 10, backgroundColor: C.bg },
+  exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  setsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   setCell: { flex: 1, textAlign: 'center', color: C.text, fontSize: 13 },
   setHeader: { color: C.muted, fontSize: 11, fontWeight: '700' },
   setInput: {
+    marginHorizontal: 4,
     backgroundColor: C.card,
-    borderRadius: 6,
-    padding: 8,
     textAlign: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-    marginHorizontal: 2,
   },
-  addSetBtn: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  addExBtn: {
-    borderWidth: 1,
-    borderColor: C.accent,
-    borderRadius: 8,
-    borderStyle: 'dashed',
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  saveBtn: {
-    backgroundColor: C.accent,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  addSetBtn: { alignSelf: 'flex-start', marginTop: 4 },
+  addExBtn: { marginBottom: 8 },
+  saveBtn: { marginTop: 20, borderRadius: 12 },
 });

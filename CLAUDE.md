@@ -89,3 +89,11 @@ cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker\android
 
 10. **Expo Go does NOT work** — it only supports its bundled SDK, not our SDK 56 native
     build. Don't suggest it; build and install the APK instead.
+
+11. **Build arm64-v8a only** (`reactNativeArchitectures=arm64-v8a` in
+    `android/gradle.properties`). Building `armeabi-v7a` blows past Windows' 260-char
+    `MAX_PATH` in the CMake/ninja codegen step — it fails with
+    `ninja: error: mkdir(…react_codegen_safeareacontext.dir/…): No such file or directory`
+    on the `armeabi-v7a` ABI (arm64-v8a's path is ~2 chars shorter, just under the limit).
+    The phone only supports arm64-v8a anyway, so the other ABIs are dead weight — this also
+    cuts the APK from ~80 MB to ~32 MB and speeds up the build.
