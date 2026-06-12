@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Injury Tracker",
+    "slug": "skadeoppfolgingsapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.evenv.skadeoppfolgingsapp"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-sharing",
+      "expo-status-bar"
+    ]
+  }
+}

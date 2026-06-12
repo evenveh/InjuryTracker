@@ -1,0 +1,62 @@
+# ---- Dependencies ----
+node_modules/
+
+# ---- Expo ----
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# ---- Native (we track android/ because it has manual customizations:
+#      Gradle 8.13, release signing, path-check override, strings.xml).
+#      Only build artifacts below are ignored. ----
+android/build/
+android/.gradle/
+android/.cxx/
+android/app/build/
+android/app/.cxx/
+/ios/
+
+# ---- Native build artifacts ----
+*.apk
+*.aab
+*.ipa
+.gradle/
+build/
+
+# ---- Metro ----
+.metro-health-check*
+
+# ---- Secrets / signing ----
+.env
+.env.*.local
+.env.local
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+
+# Keep the release keystore: losing it means you can't ship an update that
+# installs over the existing app without wiping its data. Back this folder up.
+!android/app/release.keystore
+
+# ---- Logs ----
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editor / tooling ----
+.vscode/
+.idea/
+
+# ---- Claude Code local config (local machine settings; un-ignore settings.json to share) ----
+.claude/
