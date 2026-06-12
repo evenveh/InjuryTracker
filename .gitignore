@@ -54,6 +54,11 @@ yarn-error.*
 .DS_Store
 Thumbs.db
 
+# ---- Test screenshots pulled from device ----
+appshot*.png
+en*.png
+screenshot*.png
+
 # ---- Editor / tooling ----
 .vscode/
 .idea/
