@@ -63,5 +63,9 @@ screenshot*.png
 .vscode/
 .idea/
 
-# ---- Claude Code local config (local machine settings; un-ignore settings.json to share) ----
-.claude/
+# ---- Claude Code local config (machine-specific) — but DO share project skills ----
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+# also keep the internal screenshot from the install-app skill out of git
+_shot.png
