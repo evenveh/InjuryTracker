@@ -32,6 +32,7 @@ export const ACTIVITY_TYPES = [
   { key: 'staking',  label: 'Ski erg / Poling',  icon: 'ski' },
   { key: 'svomming', label: 'Swimming',          icon: 'swim' },
   { key: 'tur',      label: 'Walk',              icon: 'walk' },
+  { key: 'standing', label: 'Standing',          icon: 'human' },
   { key: 'ellipse',  label: 'Elliptical',        icon: 'orbit' },
   { key: 'lopning',  label: 'Running',           icon: 'run' },
   { key: 'annet',    label: 'Other',             icon: 'flash' },

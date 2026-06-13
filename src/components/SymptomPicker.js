@@ -7,7 +7,6 @@ export const SYMPTOM_OPTIONS = [
   { key: 'stairs_up',      label: 'Stairs up' },
   { key: 'stairs_down',    label: 'Stairs down' },
   { key: 'sitting',        label: 'Sitting' },
-  { key: 'standing',       label: 'Standing' },
   { key: 'walking',        label: 'Walking' },
   { key: 'during_exercise', label: 'During exercise' },
   { key: 'after_exercise', label: 'After exercise' },
