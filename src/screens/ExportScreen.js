@@ -20,7 +20,7 @@ function escape(v) {
 function buildCSV(data) {
   const headers = [
     'Date', 'Weekday', 'Pain (0-10)', 'Symptoms',
-    'Activity type', 'Duration (min)',
+    'Activity type', 'Duration (min)', 'Distance (km)',
     'Exercise', 'Set', 'Weight (kg)', 'Reps',
     'Notes',
   ];
@@ -34,36 +34,37 @@ function buildCSV(data) {
       .map((k) => SYMPTOM_LABELS[k] || k)
       .join('; ');
 
-    const pushRow = (actLabel, duration, exName, setNum, weight, reps, note) =>
+    const pushRow = (actLabel, duration, distance, exName, setNum, weight, reps, note) =>
       rows.push(
         [log.date, weekday, log.pain_level, symStr,
-         actLabel, duration, exName, setNum, weight, reps, note]
+         actLabel, duration, distance, exName, setNum, weight, reps, note]
           .map(escape)
           .join(',')
       );
 
     if (!log.activities?.length) {
-      pushRow('', '', '', '', '', '', log.notes || '');
+      pushRow('', '', '', '', '', '', '', log.notes || '');
       continue;
     }
 
     for (const act of log.activities) {
       const actLabel = ACTIVITY_LABEL[act.type] || act.type;
       const dur = act.duration_min || '';
+      const dist = act.distance_km ?? '';
 
       if (act.type !== 'styrke' || !act.exercises?.length) {
-        pushRow(actLabel, dur, '', '', '', '', act.notes || log.notes || '');
+        pushRow(actLabel, dur, dist, '', '', '', '', act.notes || log.notes || '');
         continue;
       }
 
       for (const ex of act.exercises) {
         if (!ex.sets?.length) {
-          pushRow(actLabel, dur, ex.name, '', '', '', act.notes || log.notes || '');
+          pushRow(actLabel, dur, dist, ex.name, '', '', '', act.notes || log.notes || '');
           continue;
         }
         for (const sset of ex.sets) {
           pushRow(
-            actLabel, dur, ex.name,
+            actLabel, dur, dist, ex.name,
             sset.set_number,
             sset.weight_kg ?? '',
             sset.reps ?? '',

@@ -100,6 +100,7 @@ function DetailView({ date, onBack, onEdit }) {
                       <Text style={d.actTitle}>
                         {ACTIVITY_LABEL[act.type] || act.type}
                         {act.duration_min ? `  ·  ${act.duration_min} min` : ''}
+                        {act.distance_km ? `  ·  ${act.distance_km} km` : ''}
                       </Text>
                     </View>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,26 +17,34 @@ import {
   Portal,
   Modal,
   Divider,
+  TouchableRipple,
 } from 'react-native-paper';
 import {
   createActivity,
   createExercise,
   createExerciseSet,
   removeActivity,
+  getExerciseNames,
 } from '../database/db';
-import { C } from '../theme';
+import { C, RADIUS } from '../theme';
 
 export const ACTIVITY_TYPES = [
   { key: 'styrke',   label: 'Strength',          icon: 'dumbbell' },
-  { key: 'sykling',  label: 'Cycling',           icon: 'bike' },
-  { key: 'staking',  label: 'Ski erg / Poling',  icon: 'ski' },
-  { key: 'svomming', label: 'Swimming',          icon: 'swim' },
-  { key: 'tur',      label: 'Walk',              icon: 'walk' },
+  { key: 'sykling',  label: 'Cycling',           icon: 'bike',  distance: true },
+  { key: 'staking',  label: 'Ski erg / Poling',  icon: 'ski',   distance: true },
+  { key: 'svomming', label: 'Swimming',          icon: 'swim',  distance: true },
+  { key: 'tur',      label: 'Walk',              icon: 'walk',  distance: true },
   { key: 'standing', label: 'Standing',          icon: 'human' },
-  { key: 'ellipse',  label: 'Elliptical',        icon: 'orbit' },
-  { key: 'lopning',  label: 'Running',           icon: 'run' },
+  { key: 'ellipse',  label: 'Elliptical',        icon: 'orbit', distance: true },
+  { key: 'lopning',  label: 'Running',           icon: 'run',   distance: true },
   { key: 'annet',    label: 'Other',             icon: 'flash' },
 ];
+
+// Activity-type keys that track a distance (km) — derived from the flag above,
+// so adding/removing one is a one-line change in ACTIVITY_TYPES.
+const DISTANCE_TYPES = new Set(
+  ACTIVITY_TYPES.filter((t) => t.distance).map((t) => t.key)
+);
 
 export const ACTIVITY_LABEL = Object.fromEntries(
   ACTIVITY_TYPES.map(({ key, label }) => [key, label])
@@ -51,13 +59,33 @@ export const ACTIVITY_ICON = Object.fromEntries(
 function AddModal({ visible, onClose, onSaved }) {
   const [type, setType] = useState(null);
   const [duration, setDuration] = useState('');
+  const [distance, setDistance] = useState('');
   const [notes, setNotes] = useState('');
   // exercises: [{ name, sets: [{ weight, reps }] }]
   const [exercises, setExercises] = useState([]);
 
+  // Known exercise names (for type-ahead) + which exercise row is focused.
+  const [knownNames, setKnownNames] = useState([]);
+  const [focusedEx, setFocusedEx] = useState(null);
+
+  useEffect(() => {
+    if (visible) setKnownNames(getExerciseNames());
+  }, [visible]);
+
+  // Up to 5 known names that contain the typed text (but aren't already an
+  // exact match), so tapping one reuses the existing spelling.
+  const suggestionsFor = (text) => {
+    const t = text.trim().toLowerCase();
+    if (!t) return [];
+    return knownNames
+      .filter((n) => n.toLowerCase().includes(t) && n.toLowerCase() !== t)
+      .slice(0, 5);
+  };
+
   const reset = () => {
     setType(null);
     setDuration('');
+    setDistance('');
     setNotes('');
     setExercises([]);
   };
@@ -108,6 +136,7 @@ function AddModal({ visible, onClose, onSaved }) {
     onSaved({
       type,
       durationMin: duration ? parseInt(duration, 10) : null,
+      distanceKm: DISTANCE_TYPES.has(type) && distance ? parseFloat(distance) : null,
       notes,
       exercises: type === 'styrke' ? exercises : [],
     });
@@ -165,6 +194,20 @@ function AddModal({ visible, onClose, onSaved }) {
               />
             )}
 
+            {/* Distance — only for distance-based activity types */}
+            {type && DISTANCE_TYPES.has(type) && (
+              <TextInput
+                mode="outlined"
+                label="Distance (km)"
+                style={m.input}
+                value={distance}
+                onChangeText={setDistance}
+                keyboardType="decimal-pad"
+                placeholder="e.g. 5"
+                dense
+              />
+            )}
+
             {/* Exercises (styrke only) */}
             {type === 'styrke' && (
               <>
@@ -179,6 +222,14 @@ function AddModal({ visible, onClose, onSaved }) {
                           style={{ flex: 1 }}
                           value={ex.name}
                           onChangeText={(v) => setExName(exIdx, v)}
+                          onFocus={() => setFocusedEx(exIdx)}
+                          onBlur={() =>
+                            // delay so a suggestion tap registers before we hide
+                            setTimeout(
+                              () => setFocusedEx((cur) => (cur === exIdx ? null : cur)),
+                              150
+                            )
+                          }
                           placeholder="e.g. Deadlift"
                           dense
                         />
@@ -189,6 +240,22 @@ function AddModal({ visible, onClose, onSaved }) {
                           onPress={() => removeExercise(exIdx)}
                         />
                       </View>
+
+                      {focusedEx === exIdx && suggestionsFor(ex.name).length > 0 && (
+                        <View style={m.suggestions}>
+                          {suggestionsFor(ex.name).map((name) => (
+                            <TouchableRipple
+                              key={name}
+                              onPress={() => {
+                                setExName(exIdx, name);
+                                setFocusedEx(null);
+                              }}
+                            >
+                              <Text style={m.suggestionItem}>{name}</Text>
+                            </TouchableRipple>
+                          ))}
+                        </View>
+                      )}
 
                       {/* Sets header */}
                       <View style={m.setsRow}>
@@ -288,8 +355,8 @@ function AddModal({ visible, onClose, onSaved }) {
 export default function ActivityList({ activities, logId, onChange }) {
   const [showModal, setShowModal] = useState(false);
 
-  const handleSaved = ({ type, durationMin, notes, exercises }) => {
-    const actId = createActivity(logId, { type, durationMin, notes });
+  const handleSaved = ({ type, durationMin, distanceKm, notes, exercises }) => {
+    const actId = createActivity(logId, { type, durationMin, distanceKm, notes });
 
     if (type === 'styrke') {
       exercises.forEach((ex, exIdx) => {
@@ -345,7 +412,8 @@ export default function ActivityList({ activities, logId, onChange }) {
           <Card.Title
             title={
               ACTIVITY_LABEL[act.type] +
-              (act.duration_min ? `  ·  ${act.duration_min} min` : '')
+              (act.duration_min ? `  ·  ${act.duration_min} min` : '') +
+              (act.distance_km ? `  ·  ${act.distance_km} km` : '')
             }
             titleVariant="titleSmall"
             left={(props) => (
@@ -431,6 +499,20 @@ const m = StyleSheet.create({
   input: { marginTop: 16, backgroundColor: C.inner },
   exCard: { marginBottom: 10, backgroundColor: C.bg },
   exNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  suggestions: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: RADIUS.sm,
+    backgroundColor: C.card,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    color: C.text,
+    fontSize: 14,
+  },
   setsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   setCell: { flex: 1, textAlign: 'center', color: C.text, fontSize: 13 },
   setHeader: { color: C.muted, fontSize: 11, fontWeight: '700' },

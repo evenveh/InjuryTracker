@@ -64,6 +64,21 @@ export function initDatabase() {
       FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
     )
   `);
+
+  // ── Migrations ──────────────────────────────────────────────────────────────
+  // `CREATE TABLE IF NOT EXISTS` never alters a table that already exists, so a
+  // new column must be added with ALTER TABLE on existing installs. The guard
+  // makes it idempotent (runs once, then the column is already there). Old rows
+  // get NULL for the new column, which is exactly "distance unknown".
+  if (!_columnExists(db, 'activities', 'distance_km')) {
+    db.execSync('ALTER TABLE activities ADD COLUMN distance_km REAL');
+  }
+}
+
+function _columnExists(db, table, column) {
+  return db
+    .getAllSync(`PRAGMA table_info(${table})`)
+    .some((c) => c.name === column);
 }
 
 // ─── Logs ────────────────────────────────────────────────────────────────────
@@ -181,11 +196,11 @@ export function getActivitiesForLog(logId) {
   return activities;
 }
 
-export function createActivity(logId, { type, durationMin, notes }) {
+export function createActivity(logId, { type, durationMin, distanceKm, notes }) {
   const db = getDb();
   const result = db.runSync(
-    'INSERT INTO activities (log_id, type, duration_min, notes) VALUES (?, ?, ?, ?)',
-    [logId, type, durationMin ?? null, notes ?? '']
+    'INSERT INTO activities (log_id, type, duration_min, distance_km, notes) VALUES (?, ?, ?, ?, ?)',
+    [logId, type, durationMin ?? null, distanceKm ?? null, notes ?? '']
   );
   return result.lastInsertRowId;
 }
@@ -212,6 +227,20 @@ export function createExerciseSet(exerciseId, setNumber, weightKg, reps) {
     [exerciseId, setNumber, weightKg ?? null, reps ?? null]
   );
   return result.lastInsertRowId;
+}
+
+// Distinct exercise names already logged, most-used first. Drives the
+// type-ahead suggestions so the same exercise is named consistently and can be
+// grouped for analysis later.
+export function getExerciseNames() {
+  return getDb()
+    .getAllSync(
+      `SELECT name FROM exercises
+       WHERE TRIM(name) <> ''
+       GROUP BY name
+       ORDER BY COUNT(*) DESC, name COLLATE NOCASE`
+    )
+    .map((r) => r.name);
 }
 
 function _loadExercises(db, activityId) {
