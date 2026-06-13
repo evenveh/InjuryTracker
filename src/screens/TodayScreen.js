@@ -263,7 +263,7 @@ export default function TodayScreen() {
             <Card mode="contained" style={s.yesterdayCard}>
               <Card.Content>
                 <Text variant="labelSmall" style={s.sectionLabel}>
-                  {formatShort(prevDate).toUpperCase()} — PAIN CAN SHOW UP THE NEXT DAY
+                  PREVIOUS DAY · {formatShort(prevDate).toUpperCase()}
                 </Text>
                 <View style={s.yesterdayRow}>
                   <View
@@ -296,6 +296,7 @@ export default function TodayScreen() {
                     ) : null}
                   </View>
                 </View>
+                <Text style={s.ydHint}>Pain can show up the next day</Text>
               </Card.Content>
             </Card>
           )}
@@ -344,4 +345,5 @@ const s = StyleSheet.create({
   ydActivity: { color: C.text, fontSize: 13, fontWeight: '600', marginBottom: 2 },
   ydSymptoms: { color: C.muted, fontSize: 12, marginBottom: 2 },
   ydNotes: { color: C.muted, fontSize: 12, fontStyle: 'italic' },
+  ydHint: { color: C.muted, fontSize: 11, fontStyle: 'italic', marginTop: 10 },
 });

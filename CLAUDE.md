@@ -8,6 +8,8 @@ locally and can be exported to CSV/JSON for a therapist.
 The app UI is in **English**. The end user is Norwegian and communicates in Norwegian —
 respond to them in Norwegian, but keep all code, UI strings, and identifiers English.
 
+One goal of this development from the user side is learning. Make sure you teach the user the changes you do and explain why and how elements are tied together.
+
 ## Tech stack
 
 - **Expo SDK 56** / **React Native 0.85** (bare workflow — `android/` is committed)
@@ -26,7 +28,7 @@ respond to them in Norwegian, but keep all code, UI strings, and identifiers Eng
 ```
 index.js                      ← registerRootComponent(App)  ← DO NOT DELETE (see gotchas)
 App.js                        ← PaperProvider + navigation + initDatabase()
-src/theme.js                  ← Paper MD3 dark theme, pain-colour util, vector-icon adapter
+src/theme.js                  ← Paper MD3 light theme, design tokens, pain-colour util, vector-icon adapter
 src/database/db.js            ← all SQLite (getOrCreateLog, updateLog, deleteLogIfEmpty…)
 src/screens/TodayScreen.js    ← per-day logging; ‹/› date nav to back-fill past days
 src/screens/HistoryScreen.js  ← list + detail view

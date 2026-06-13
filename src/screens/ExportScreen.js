@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Card, Button } from 'react-native-paper';
+import { Text, Card, Button, Icon } from 'react-native-paper';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
@@ -175,7 +175,10 @@ export default function ExportScreen() {
 
         <Card mode="contained" style={s.infoCard}>
           <Card.Content>
-            <Text variant="titleSmall" style={s.infoTitle}>About data storage</Text>
+            <View style={s.infoHeader}>
+              <Icon source="shield-lock-outline" size={18} color={C.accent} />
+              <Text variant="titleSmall" style={s.infoTitle}>About data storage</Text>
+            </View>
             <Text style={s.infoText}>
               All data is stored exclusively on your phone via SQLite.
               No data is sent to the internet. History is not deleted on app
@@ -197,6 +200,7 @@ const s = StyleSheet.create({
   cardTitle: { color: C.text, fontWeight: '700', marginBottom: 8 },
   cardDesc: { color: C.muted, fontSize: 14, lineHeight: 20, marginBottom: 16 },
   infoCard: { backgroundColor: C.inner },
-  infoTitle: { color: C.accent, fontWeight: '700', marginBottom: 8 },
+  infoHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  infoTitle: { color: C.accent, fontWeight: '700' },
   infoText: { color: C.muted, fontSize: 13, lineHeight: 20 },
 });

@@ -67,6 +67,11 @@ export const C = {
 // Status bar: dark icons read on the light header background.
 export const statusBarStyle = 'dark';
 
+// Design tokens — a small, consistent spacing & corner scale used across screens
+// so vertical rhythm and rounding stay uniform instead of ad-hoc magic numbers.
+export const SPACING = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 };
+export const RADIUS = { sm: 8, md: 12, lg: 16 };
+
 // Pain scale colours (0 = green … 10 = deep red). Shared by every screen.
 const PAIN_COLORS = [
   '#22c55e', '#4ade80', '#86efac', '#fbbf24', '#fb923c',

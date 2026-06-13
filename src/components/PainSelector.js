@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, TouchableRipple } from 'react-native-paper';
-import { getPainColor, PAIN_LABELS, C } from '../theme';
+import { getPainColor, PAIN_LABELS, C, SPACING, RADIUS } from '../theme';
 
 export default function PainSelector({ value, onChange }) {
   return (
@@ -34,9 +34,11 @@ export default function PainSelector({ value, onChange }) {
           );
         })}
       </View>
-      <Text style={[styles.label, { color: getPainColor(value) }]}>
-        {PAIN_LABELS[value]}
-      </Text>
+      <View style={[styles.labelWrap, { backgroundColor: getPainColor(value) + '22' }]}>
+        <Text style={[styles.label, { color: getPainColor(value) }]}>
+          {value} · {PAIN_LABELS[value]}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -62,9 +64,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  labelWrap: {
+    alignSelf: 'center',
+    marginTop: SPACING.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: RADIUS.md,
+  },
   label: {
     textAlign: 'center',
-    marginTop: 12,
     fontSize: 14,
     fontWeight: '700',
   },

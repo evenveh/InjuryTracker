@@ -193,10 +193,13 @@ export default function HistoryScreen() {
           );
         }}
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', paddingTop: 80 }}>
-            <Icon source="notebook-outline" size={48} color={C.muted} />
-            <Text style={{ color: C.muted, fontSize: 16, textAlign: 'center', marginTop: 12 }}>
-              No entries yet.{'\n'}Start logging today!
+          <View style={{ alignItems: 'center', paddingTop: 96, paddingHorizontal: 32 }}>
+            <Icon source="clipboard-text-clock-outline" size={56} color={C.muted} />
+            <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', marginTop: 16 }}>
+              No entries yet
+            </Text>
+            <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+              Log today's pain and activities on the Today tab — they'll show up here.
             </Text>
           </View>
         }
@@ -208,13 +211,13 @@ export default function HistoryScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const l = StyleSheet.create({
-  card: { marginBottom: 8 },
+  card: { marginBottom: 10 },
   ripple: { borderRadius: 12 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
+    gap: 14,
+    padding: 16,
   },
   badge: {
     width: 38,
