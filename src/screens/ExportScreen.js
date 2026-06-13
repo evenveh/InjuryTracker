@@ -5,10 +5,13 @@ import { Text, Card, Button, Icon } from 'react-native-paper';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-import { getFullExportData } from '../database/db';
+import { getFullExportData, getMeta, setMeta } from '../database/db';
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import { ACTIVITY_LABEL } from '../components/ActivityList';
 import { C } from '../theme';
+
+const SAF = FileSystem.StorageAccessFramework;
+const EXPORT_DIR_KEY = 'export_dir_uri';
 
 function escape(v) {
   return `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -74,59 +77,107 @@ function buildCSV(data) {
   return rows.join('\n');
 }
 
-async function shareFile(uri, mimeType, dialogTitle) {
+// ─── Payload builders ──────────────────────────────────────────────────────────
+// Each returns the file contents + naming, or null when there's nothing to export.
+
+function todayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function csvPayload() {
+  const data = getFullExportData();
+  if (!data.length) return null;
+  return {
+    content: '﻿' + buildCSV(data), // UTF-8 BOM so Excel reads special chars
+    baseName: `injury_log_${todayKey()}`,
+    ext: 'csv',
+    mimeType: 'text/csv',
+  };
+}
+
+function jsonPayload() {
+  const data = getFullExportData();
+  if (!data.length) return null;
+  return {
+    content: JSON.stringify(data, null, 2),
+    baseName: `injury_log_backup_${todayKey()}`,
+    ext: 'json',
+    mimeType: 'application/json',
+  };
+}
+
+// ─── Output actions ─────────────────────────────────────────────────────────────
+
+// Share sheet: write to app-private storage, then hand the file to another app.
+async function sharePayload(payload) {
+  const uri = FileSystem.documentDirectory + `${payload.baseName}.${payload.ext}`;
+  await FileSystem.writeAsStringAsync(uri, payload.content, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType, dialogTitle });
+    await Sharing.shareAsync(uri, {
+      mimeType: payload.mimeType,
+      dialogTitle: `Share ${payload.ext.toUpperCase()}`,
+    });
   } else {
     Alert.alert('Saved', `File saved to:\n${uri}`);
   }
 }
 
+// Save to a user-visible folder via the Storage Access Framework. The granted
+// folder is remembered (db_meta) so we only prompt once; if that grant was
+// revoked, creating the file throws and we ask again.
+async function savePayloadToDevice(payload) {
+  const writeInto = async (dirUri) => {
+    const fileUri = await SAF.createFileAsync(dirUri, payload.baseName, payload.mimeType);
+    await FileSystem.writeAsStringAsync(fileUri, payload.content, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+  };
+
+  const saved = getMeta(EXPORT_DIR_KEY);
+  if (saved) {
+    try {
+      await writeInto(saved);
+      return true;
+    } catch {
+      // permission likely revoked — fall through to ask again
+    }
+  }
+
+  const perm = await SAF.requestDirectoryPermissionsAsync();
+  if (!perm.granted) return false; // user cancelled the folder picker
+  setMeta(EXPORT_DIR_KEY, perm.directoryUri);
+  await writeInto(perm.directoryUri);
+  return true;
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
 export default function ExportScreen() {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null); // id of the running action, or null
+  const isBusy = busy !== null;
 
-  const exportCSV = async () => {
+  const run = async (id, build, action, successMsg) => {
     try {
-      setBusy(true);
-      const data = getFullExportData();
-      if (!data.length) { Alert.alert('No data', 'The log is empty.'); return; }
-
-      // UTF-8 BOM so Excel opens special characters correctly
-      const csv = '﻿' + buildCSV(data);
-      const name = `injury_log_${new Date().toISOString().split('T')[0]}.csv`;
-      const uri = FileSystem.documentDirectory + name;
-
-      await FileSystem.writeAsStringAsync(uri, csv, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-      await shareFile(uri, 'text/csv', 'Share CSV report');
+      setBusy(id);
+      const payload = build();
+      if (!payload) { Alert.alert('No data', 'The log is empty.'); return; }
+      const ok = await action(payload);
+      const msg = successMsg && successMsg(ok, payload);
+      if (msg) Alert.alert('Saved to device ✓', msg);
     } catch (e) {
       Alert.alert('Error', e.message);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
-  const exportJSON = async () => {
-    try {
-      setBusy(true);
-      const data = getFullExportData();
-      if (!data.length) { Alert.alert('No data', 'The log is empty.'); return; }
-
-      const json = JSON.stringify(data, null, 2);
-      const name = `injury_log_backup_${new Date().toISOString().split('T')[0]}.json`;
-      const uri = FileSystem.documentDirectory + name;
-
-      await FileSystem.writeAsStringAsync(uri, json, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-      await shareFile(uri, 'application/json', 'Share backup');
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const share = (id, build) => run(id, build, sharePayload, null);
+  const save = (id, build) =>
+    run(id, build, savePayloadToDevice, (ok, p) =>
+      ok ? `${p.baseName}.${p.ext} was written to the folder you picked.` : null
+    );
 
   return (
     <SafeAreaView style={s.container} edges={['left', 'right']}>
@@ -134,7 +185,7 @@ export default function ExportScreen() {
 
         <Card mode="elevated" elevation={2} style={s.card}>
           <Card.Content>
-            <Text variant="titleMedium" style={s.cardTitle}>Export to CSV</Text>
+            <Text variant="titleMedium" style={s.cardTitle}>CSV report</Text>
             <Text style={s.cardDesc}>
               One row per set. Includes date, pain, symptoms, activities with
               exercise/weight/reps and notes. Opens directly in Excel — special
@@ -142,33 +193,55 @@ export default function ExportScreen() {
             </Text>
             <Button
               mode="contained"
-              icon="file-delimited-outline"
-              onPress={exportCSV}
-              disabled={busy}
-              loading={busy}
-              contentStyle={{ paddingVertical: 6 }}
+              icon="share-variant"
+              onPress={() => share('csv-share', csvPayload)}
+              disabled={isBusy}
+              loading={busy === 'csv-share'}
+              contentStyle={s.btnContent}
             >
-              {busy ? 'Exporting…' : 'Export CSV'}
+              Share CSV
+            </Button>
+            <Button
+              mode="outlined"
+              icon="content-save-outline"
+              onPress={() => save('csv-save', csvPayload)}
+              disabled={isBusy}
+              loading={busy === 'csv-save'}
+              style={s.secondBtn}
+              contentStyle={s.btnContent}
+            >
+              Save to device
             </Button>
           </Card.Content>
         </Card>
 
         <Card mode="elevated" elevation={2} style={s.card}>
           <Card.Content>
-            <Text variant="titleMedium" style={s.cardTitle}>Backup (JSON)</Text>
+            <Text variant="titleMedium" style={s.cardTitle}>JSON backup</Text>
             <Text style={s.cardDesc}>
               Complete backup of all data. Can be used to restore when needed
               or opened in another program.
             </Text>
             <Button
-              mode="outlined"
-              icon="code-json"
-              onPress={exportJSON}
-              disabled={busy}
-              loading={busy}
-              contentStyle={{ paddingVertical: 6 }}
+              mode="contained"
+              icon="share-variant"
+              onPress={() => share('json-share', jsonPayload)}
+              disabled={isBusy}
+              loading={busy === 'json-share'}
+              contentStyle={s.btnContent}
             >
-              {busy ? 'Exporting…' : 'Export JSON backup'}
+              Share JSON
+            </Button>
+            <Button
+              mode="outlined"
+              icon="content-save-outline"
+              onPress={() => save('json-save', jsonPayload)}
+              disabled={isBusy}
+              loading={busy === 'json-save'}
+              style={s.secondBtn}
+              contentStyle={s.btnContent}
+            >
+              Save to device
             </Button>
           </Card.Content>
         </Card>
@@ -199,6 +272,8 @@ const s = StyleSheet.create({
   card: { marginBottom: 12 },
   cardTitle: { color: C.text, fontWeight: '700', marginBottom: 8 },
   cardDesc: { color: C.muted, fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  btnContent: { paddingVertical: 6 },
+  secondBtn: { marginTop: 10 },
   infoCard: { backgroundColor: C.inner },
   infoHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   infoTitle: { color: C.accent, fontWeight: '700' },

@@ -107,6 +107,22 @@ export function deleteLogIfEmpty(date) {
   db.runSync('DELETE FROM logs WHERE id = ?', [log.id]);
 }
 
+// ─── Meta (small key/value settings) ─────────────────────────────────────────
+// Reuses the db_meta table. Used to remember the export folder the user picked
+// via the Storage Access Framework so we don't prompt on every save.
+
+export function getMeta(key) {
+  const row = getDb().getFirstSync('SELECT value FROM db_meta WHERE key = ?', [key]);
+  return row ? row.value : null;
+}
+
+export function setMeta(key, value) {
+  getDb().runSync(
+    'INSERT INTO db_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    [key, value]
+  );
+}
+
 export function getLogWithDetails(date) {
   const db = getDb();
   const log = db.getFirstSync('SELECT * FROM logs WHERE date = ?', [date]);
