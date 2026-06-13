@@ -13,16 +13,22 @@ respond to them in Norwegian, but keep all code, UI strings, and identifiers Eng
 - **Expo SDK 56** / **React Native 0.85** (bare workflow — `android/` is committed)
 - **expo-sqlite** for local storage (survives app updates)
 - **@react-navigation/bottom-tabs** — three tabs: Today / History / Export
-- **expo-file-system** + **expo-sharing** for CSV/JSON export
+- **react-native-paper** (Material Design 3 dark theme) for the UI;
+  **@expo/vector-icons** (`MaterialCommunityIcons`) for all icons. Paper renders icons
+  through an adapter in `src/theme.js`, so icon fonts load via **expo-font** — no native
+  `react-native-vector-icons` linking, no Gradle changes (the `.ttf` bundles into the APK).
+- **expo-file-system** + **expo-sharing** for CSV/JSON export.
+  ⚠️ Import the file APIs from **`expo-file-system/legacy`** (see gotchas).
 - JS engine: Hermes. `toLocaleDateString('en-GB', …)` works fine here.
 
 ## Architecture
 
 ```
 index.js                      ← registerRootComponent(App)  ← DO NOT DELETE (see gotchas)
-App.js                        ← navigation + initDatabase()
-src/database/db.js            ← all SQLite (getOrCreateLog, updateLog, activities…)
-src/screens/TodayScreen.js    ← daily logging + "yesterday" context banner
+App.js                        ← PaperProvider + navigation + initDatabase()
+src/theme.js                  ← Paper MD3 dark theme, pain-colour util, vector-icon adapter
+src/database/db.js            ← all SQLite (getOrCreateLog, updateLog, deleteLogIfEmpty…)
+src/screens/TodayScreen.js    ← per-day logging; ‹/› date nav to back-fill past days
 src/screens/HistoryScreen.js  ← list + detail view
 src/screens/ExportScreen.js   ← CSV (UTF-8 BOM) + JSON backup
 src/components/PainSelector.js, SymptomPicker.js, ActivityList.js
@@ -97,3 +103,19 @@ cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker\android
     on the `armeabi-v7a` ABI (arm64-v8a's path is ~2 chars shorter, just under the limit).
     The phone only supports arm64-v8a anyway, so the other ABIs are dead weight — this also
     cuts the APK from ~80 MB to ~32 MB and speeds up the build.
+
+12. **expo-file-system: import from `expo-file-system/legacy`.** In SDK 56 the classic
+    `FileSystem.writeAsStringAsync` / `documentDirectory` / `EncodingType` API is deprecated
+    and **throws at runtime** (`Method writeAsStringAsync … is deprecated`) — which the
+    Export screen surfaced as an error alert. Fix: `import * as FileSystem from
+    'expo-file-system/legacy'`. Same API, no deprecation; keeps the UTF-8 BOM behaviour that
+    makes Excel open special characters. (The new `File`/`Directory`/`Paths` API is the
+    long-term path, but legacy is the low-risk fix.)
+
+13. **Don't hardcode `height` on the bottom tab bar without adding the safe-area inset.**
+    Setting `tabBarStyle: { height: 60 }` makes React Navigation stop auto-adding the bottom
+    inset, so Android's system nav bar overlaps the Today/History/Export tabs. Fix in
+    `App.js`: a `Tabs` child of `SafeAreaProvider` reads `useSafeAreaInsets()` and uses
+    `height: 60 + insets.bottom`, `paddingBottom: 8 + insets.bottom`. The hook must run in a
+    component **inside** the provider (App renders the provider, so it can't read insets
+    itself).

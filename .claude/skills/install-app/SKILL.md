@@ -35,7 +35,21 @@ Expect `RFGL10GT15W   device`. Other outcomes:
 - An `emulator-XXXX  offline` line is harmless here — Gradle + adb skip it. (It only breaks
   `expo run:android`, which we don't use.)
 
-### 2. Build the release APK
+### 2. (Optional but recommended) Bundle-check the JS first
+
+After JS changes, verify the bundle compiles **before** the multi-minute native build —
+this catches import/syntax errors and missing modules in ~15s:
+
+```powershell
+cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker
+npx expo export --platform android --output-dir .expo-export-check
+Remove-Item -Recurse -Force .expo-export-check
+```
+
+Look for `Android Bundled … index.js` with no errors. It also lists bundled assets — handy
+to confirm icon fonts ship (e.g. `MaterialCommunityIcons.ttf`).
+
+### 3. Build the release APK
 
 ```powershell
 cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker\android
@@ -44,7 +58,11 @@ cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker\android
 
 Wait for `BUILD SUCCESSFUL` (~1–4 min). If it fails, jump to Troubleshooting.
 
-### 3. Install on the phone
+Note: Gradle's native (CMake) output can be truncated and PowerShell may report a misleading
+exit code. To get the real failure cause, grep the output for the `What went wrong` block
+rather than trusting the tail.
+
+### 4. Install on the phone
 
 ```powershell
 & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s RFGL10GT15W `
@@ -56,7 +74,7 @@ Expect `Success`. If it fails with a **signature mismatch**
 first then re-install (this wipes data):
 `adb -s RFGL10GT15W uninstall com.evenv.skadeoppfolgingsapp`.
 
-### 4. Launch and verify it didn't crash
+### 5. Launch and verify it didn't crash
 
 ```powershell
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
@@ -75,6 +93,14 @@ Optional visual check (pull a screenshot and Read it):
 ```
 `_shot.png` is gitignored. Delete it when done.
 
+Driving the UI over adb (if you want to verify a screen, not just that it launched):
+- **Tap coordinates are in physical pixels (1440×3120), not the scaled screenshot.** A
+  Read screenshot is ~360×780, so multiply by 4: `tap = screenshot_xy × (1440/360)`.
+  Getting this wrong silently taps the wrong thing (e.g. opens another app).
+- The phone may surface a media/notification overlay; a screenshot can capture *that* or
+  Spotify instead of the app. `am force-stop` then re-`am start` (or press `KEYCODE_BACK`)
+  to get a clean app screen before the screencap.
+
 ## Troubleshooting (root causes we actually hit)
 
 | Symptom | Fix |
@@ -84,6 +110,8 @@ Optional visual check (pull a screenshot and Read it):
 | `cannot open file …<F8>…` / NDK C++ error | Project path has non-ASCII chars. The path must be pure ASCII. |
 | `expo run:android` crashes on `TCP port 5562` | A stale offline emulator. Don't use `expo run:android` — use Gradle + adb as above. |
 | App needs Metro / "could not connect to development server" | A debug APK got installed. Always build **release** (`assembleRelease`). |
+| `ninja: error: mkdir(…react_codegen_…): No such file or directory` on `armeabi-v7a` | Windows 260-char `MAX_PATH` in CMake codegen. `reactNativeArchitectures=arm64-v8a` in `gradle.properties` (the phone is arm64 only). Already pinned — don't re-add other ABIs. Clearing `app\.cxx` does **not** fix it. |
+| Export screen shows `Method writeAsStringAsync … is deprecated` | Not a build issue. `ExportScreen.js` must import from `expo-file-system/legacy`, not `expo-file-system`. |
 
 ## After building
 

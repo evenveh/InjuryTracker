@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -8,8 +8,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Card, Button, TextInput } from 'react-native-paper';
-import { useFocusEffect } from '@react-navigation/native';
+import { Text, Card, Button, TextInput, IconButton } from 'react-native-paper';
+import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 
 import {
   getOrCreateLog,
@@ -18,20 +18,32 @@ import {
   saveSymptomsForLog,
   getActivitiesForLog,
   getLogWithDetails,
+  deleteLogIfEmpty,
 } from '../database/db';
 import PainSelector from '../components/PainSelector';
 import SymptomPicker, { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import ActivityList, { ACTIVITY_LABEL } from '../components/ActivityList';
 import { C, getPainColor } from '../theme';
 
-function todayStr() {
-  return new Date().toISOString().split('T')[0];
+// Local-date key "YYYY-MM-DD". Never use toISOString() for these: it converts
+// to UTC, which in a positive-offset timezone (e.g. CEST = UTC+2) rolls the date
+// back a day — that made "+1 day" cancel out (forward nav did nothing) and
+// "-1 day" jump two days back.
+function toDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-function yesterdayStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+function todayStr() {
+  return toDateStr(new Date());
+}
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return toDateStr(d);
 }
 
 function formatDate(dateStr) {
@@ -41,6 +53,15 @@ function formatDate(dateStr) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+  });
+}
+
+function formatShort(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
   });
 }
 
@@ -56,31 +77,85 @@ function SectionCard({ title, children, style }) {
 }
 
 export default function TodayScreen() {
-  const today = todayStr();
-  const yesterday = yesterdayStr();
+  const route = useRoute();
+  const navigation = useNavigation();
+
+  const [viewDate, setViewDate] = useState(todayStr());
+  const viewDateRef = useRef(viewDate);
+  viewDateRef.current = viewDate;
 
   const [log, setLog] = useState(null);
   const [painLevel, setPainLevel] = useState(0);
   const [notes, setNotes] = useState('');
   const [symptoms, setSymptoms] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [yesterdayLog, setYesterdayLog] = useState(null);
+  const [prevLog, setPrevLog] = useState(null);
   const [dirty, setDirty] = useState(false);
 
-  const loadDay = useCallback(() => {
-    const l = getOrCreateLog(today);
+  const today = todayStr();
+  const isToday = viewDate === today;
+  const prevDate = addDays(viewDate, -1);
+  const nextDate = addDays(viewDate, 1);
+
+  const loadDay = useCallback((date) => {
+    const l = getOrCreateLog(date);
     setLog(l);
     setPainLevel(l.pain_level);
     setNotes(l.notes || '');
     setSymptoms(getSymptomsForLog(l.id));
     setActivities(getActivitiesForLog(l.id));
     setDirty(false);
-    setYesterdayLog(getLogWithDetails(yesterday));
-  }, [today, yesterday]);
+    setPrevLog(getLogWithDetails(addDays(date, -1)));
+  }, []);
 
+  // Reload whenever the screen regains focus (e.g. coming back from History).
+  // On blur, drop the viewed day if it's an untouched past day, so merely
+  // browsing back doesn't leave empty entries in the history.
   useFocusEffect(
-    useCallback(() => { loadDay(); }, [loadDay])
+    useCallback(() => {
+      // Opened from History's "Edit" button → jump to that date.
+      const paramDate = route.params?.date;
+      if (paramDate) {
+        navigation.setParams({ date: undefined });
+        if (viewDateRef.current !== todayStr() && viewDateRef.current !== paramDate) {
+          deleteLogIfEmpty(viewDateRef.current);
+        }
+        viewDateRef.current = paramDate;
+        setViewDate(paramDate);
+        loadDay(paramDate);
+      } else {
+        loadDay(viewDateRef.current);
+      }
+      return () => {
+        if (viewDateRef.current !== todayStr()) {
+          deleteLogIfEmpty(viewDateRef.current);
+        }
+      };
+    }, [loadDay, route.params?.date, navigation])
   );
+
+  const switchTo = (date) => {
+    if (date > today) return; // can't log the future
+    // Clean up the day we're leaving if it's an untouched past day.
+    if (viewDate !== today) deleteLogIfEmpty(viewDate);
+    setViewDate(date);
+    loadDay(date);
+  };
+
+  const goToDate = (date) => {
+    if (dirty) {
+      Alert.alert(
+        'Unsaved changes',
+        'Leave this day without saving?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: () => switchTo(date) },
+        ]
+      );
+      return;
+    }
+    switchTo(date);
+  };
 
   const refreshActivities = () => {
     if (!log) return;
@@ -93,7 +168,7 @@ export default function TodayScreen() {
     updateLog(log.id, { painLevel, notes });
     saveSymptomsForLog(log.id, symptoms);
     setDirty(false);
-    Alert.alert('Saved ✓', 'Your log has been updated.');
+    Alert.alert('Saved ✓', isToday ? 'Your log has been updated.' : `Log for ${formatShort(viewDate)} saved.`);
   };
 
   const mark = (fn) => (...args) => { fn(...args); setDirty(true); };
@@ -108,9 +183,42 @@ export default function TodayScreen() {
           contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text variant="titleMedium" style={s.dateHeader}>{formatDate(today)}</Text>
+          {/* Date navigation */}
+          <View style={s.dateNav}>
+            <IconButton
+              icon="chevron-left"
+              size={28}
+              onPress={() => goToDate(prevDate)}
+              iconColor={C.accent}
+            />
+            <View style={s.dateCenter}>
+              <Text
+                variant="titleMedium"
+                style={[s.dateHeader, !isToday && { color: '#fbbf24' }]}
+              >
+                {formatDate(viewDate)}
+              </Text>
+              {!isToday && (
+                <Button
+                  compact
+                  icon="calendar-today"
+                  onPress={() => goToDate(today)}
+                  textColor={C.muted}
+                >
+                  Back to today
+                </Button>
+              )}
+            </View>
+            <IconButton
+              icon="chevron-right"
+              size={28}
+              onPress={() => goToDate(nextDate)}
+              disabled={isToday}
+              iconColor={C.accent}
+            />
+          </View>
 
-          <SectionCard title="PAIN TODAY">
+          <SectionCard title="PAIN">
             <PainSelector value={painLevel} onChange={mark(setPainLevel)} />
           </SectionCard>
 
@@ -150,39 +258,40 @@ export default function TodayScreen() {
             {dirty ? 'Save changes' : 'Saved'}
           </Button>
 
-          {yesterdayLog && (
+          {/* Previous-day context */}
+          {prevLog && (
             <Card mode="contained" style={s.yesterdayCard}>
               <Card.Content>
                 <Text variant="labelSmall" style={s.sectionLabel}>
-                  YESTERDAY — pain can show up the next day
+                  {formatShort(prevDate).toUpperCase()} — PAIN CAN SHOW UP THE NEXT DAY
                 </Text>
                 <View style={s.yesterdayRow}>
                   <View
                     style={[
                       s.painDot,
-                      { backgroundColor: getPainColor(yesterdayLog.pain_level) },
+                      { backgroundColor: getPainColor(prevLog.pain_level) },
                     ]}
                   >
-                    <Text style={s.painDotText}>{yesterdayLog.pain_level}</Text>
+                    <Text style={s.painDotText}>{prevLog.pain_level}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    {yesterdayLog.activities?.length > 0 && (
+                    {prevLog.activities?.length > 0 && (
                       <Text style={s.ydActivity}>
-                        {yesterdayLog.activities
+                        {prevLog.activities
                           .map((a) => ACTIVITY_LABEL[a.type] || a.type)
                           .join(', ')}
                       </Text>
                     )}
-                    {yesterdayLog.symptoms?.length > 0 && (
+                    {prevLog.symptoms?.length > 0 && (
                       <Text style={s.ydSymptoms}>
-                        {yesterdayLog.symptoms
+                        {prevLog.symptoms
                           .map((k) => SYMPTOM_LABELS[k] || k)
                           .join(', ')}
                       </Text>
                     )}
-                    {yesterdayLog.notes ? (
+                    {prevLog.notes ? (
                       <Text style={s.ydNotes} numberOfLines={2}>
-                        {yesterdayLog.notes}
+                        {prevLog.notes}
                       </Text>
                     ) : null}
                   </View>
@@ -199,11 +308,17 @@ export default function TodayScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   scroll: { padding: 16, paddingBottom: 48 },
+  dateNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dateCenter: { flex: 1, alignItems: 'center' },
   dateHeader: {
     color: C.accent,
     fontWeight: '700',
     textTransform: 'capitalize',
-    marginBottom: 16,
+    textAlign: 'center',
   },
   card: { marginBottom: 12 },
   sectionLabel: {

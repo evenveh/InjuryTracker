@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -9,7 +9,7 @@ import {
   TouchableRipple,
   Icon,
 } from 'react-native-paper';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { getAllLogs, getLogWithDetails } from '../database/db';
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
@@ -28,12 +28,15 @@ function formatDate(dateStr) {
 
 // ─── Detail view ──────────────────────────────────────────────────────────────
 
-function DetailView({ date, onBack }) {
+function DetailView({ date, onBack, onEdit }) {
   const [log, setLog] = useState(null);
 
-  useEffect(() => {
-    setLog(getLogWithDetails(date));
-  }, [date]);
+  // useFocusEffect so the detail refreshes after editing the day in the Today tab.
+  useFocusEffect(
+    useCallback(() => {
+      setLog(getLogWithDetails(date));
+    }, [date])
+  );
 
   if (!log) return null;
 
@@ -47,6 +50,7 @@ function DetailView({ date, onBack }) {
           title={formatDate(date)}
           titleStyle={{ fontSize: 17, fontWeight: '700', textTransform: 'capitalize' }}
         />
+        <Appbar.Action icon="pencil" onPress={onEdit} color={C.accent} />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={d.content}>
@@ -137,6 +141,7 @@ function DetailView({ date, onBack }) {
 // ─── List view ────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
+  const navigation = useNavigation();
   const [logs, setLogs] = useState([]);
   const [selected, setSelected] = useState(null);
 
@@ -147,7 +152,13 @@ export default function HistoryScreen() {
   );
 
   if (selected) {
-    return <DetailView date={selected} onBack={() => setSelected(null)} />;
+    return (
+      <DetailView
+        date={selected}
+        onBack={() => setSelected(null)}
+        onEdit={() => navigation.navigate('Today', { date: selected })}
+      />
+    );
   }
 
   return (

@@ -94,6 +94,19 @@ export function getAllLogs() {
   return getDb().getAllSync('SELECT * FROM logs ORDER BY date DESC');
 }
 
+// Removes a day's row only if nothing was actually entered (pain 0, no notes,
+// no symptoms, no activities). Used when browsing back through past days so
+// merely *viewing* a day doesn't leave an empty entry in the history.
+export function deleteLogIfEmpty(date) {
+  const db = getDb();
+  const log = db.getFirstSync('SELECT * FROM logs WHERE date = ?', [date]);
+  if (!log) return;
+  if (log.pain_level !== 0 || (log.notes && log.notes.trim() !== '')) return;
+  if (db.getFirstSync('SELECT 1 FROM symptoms WHERE log_id = ? LIMIT 1', [log.id])) return;
+  if (db.getFirstSync('SELECT 1 FROM activities WHERE log_id = ? LIMIT 1', [log.id])) return;
+  db.runSync('DELETE FROM logs WHERE id = ?', [log.id]);
+}
+
 export function getLogWithDetails(date) {
   const db = getDb();
   const log = db.getFirstSync('SELECT * FROM logs WHERE date = ?', [date]);
