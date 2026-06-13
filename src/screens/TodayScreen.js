@@ -194,7 +194,7 @@ export default function TodayScreen() {
             <View style={s.dateCenter}>
               <Text
                 variant="titleMedium"
-                style={[s.dateHeader, !isToday && { color: '#fbbf24' }]}
+                style={[s.dateHeader, !isToday && { color: C.warn }]}
               >
                 {formatDate(viewDate)}
               </Text>

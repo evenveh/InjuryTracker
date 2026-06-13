@@ -13,7 +13,7 @@ respond to them in Norwegian, but keep all code, UI strings, and identifiers Eng
 - **Expo SDK 56** / **React Native 0.85** (bare workflow — `android/` is committed)
 - **expo-sqlite** for local storage (survives app updates)
 - **@react-navigation/bottom-tabs** — three tabs: Today / History / Export
-- **react-native-paper** (Material Design 3 dark theme) for the UI;
+- **react-native-paper** (Material Design 3 light theme) for the UI;
   **@expo/vector-icons** (`MaterialCommunityIcons`) for all icons. Paper renders icons
   through an adapter in `src/theme.js`, so icon fonts load via **expo-font** — no native
   `react-native-vector-icons` linking, no Gradle changes (the `.ttf` bundles into the APK).

@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 import { initDatabase } from './src/database/db';
-import { theme, paperSettings, C } from './src/theme';
+import { theme, paperSettings, C, statusBarStyle } from './src/theme';
 import TodayScreen from './src/screens/TodayScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import ExportScreen from './src/screens/ExportScreen';
@@ -92,7 +92,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PaperProvider theme={theme} settings={paperSettings}>
-          <StatusBar style="light" backgroundColor={C.card} />
+          <StatusBar style={statusBarStyle} backgroundColor={C.card} />
           <Tabs />
         </PaperProvider>
       </SafeAreaProvider>

@@ -1,31 +1,33 @@
 import React from 'react';
-import { MD3DarkTheme } from 'react-native-paper';
+import { MD3LightTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Brand palette (kept from the original hand-rolled dark theme) mapped onto
-// Material Design 3 roles so Paper components inherit the app's identity.
+// Light palette. The accent is a deep teal (darker than the old cyan) so buttons,
+// links and the active tab stay readable on white. Mapped onto Material Design 3
+// roles so Paper components inherit the app's identity.
 const BRAND = {
-  bg: '#0f0f1a',       // app background
-  surface: '#1a1a2e',  // cards / headers
-  surfaceAlt: '#13131f', // inner surfaces (rows, inputs)
-  accent: '#4cc9f0',   // cyan accent
-  text: '#e0e0e0',
-  muted: '#8a8aa0',
-  border: '#2d2d4e',
-  danger: '#ef4444',
+  bg: '#f4f5fa',        // app background (near-white)
+  surface: '#ffffff',   // cards / headers
+  surfaceAlt: '#eef0f6', // inner surfaces (rows, inputs)
+  accent: '#0e7f9e',    // deep teal accent
+  text: '#1a1a2e',      // near-black text
+  muted: '#5b5b73',     // secondary text
+  border: '#d6d9e6',    // hairline borders
+  danger: '#c62828',
+  warn: '#b45309',      // "editing a past day" indicator (dark amber on light)
 };
 
 export const theme = {
-  ...MD3DarkTheme,
+  ...MD3LightTheme,
   roundness: 3,
   colors: {
-    ...MD3DarkTheme.colors,
+    ...MD3LightTheme.colors,
     primary: BRAND.accent,
-    onPrimary: '#001620',
-    primaryContainer: '#13414f',
-    onPrimaryContainer: '#bfeaf7',
+    onPrimary: '#ffffff',
+    primaryContainer: '#bfe6f1',
+    onPrimaryContainer: '#06323f',
     secondary: BRAND.accent,
-    onSecondary: '#001620',
+    onSecondary: '#ffffff',
     background: BRAND.bg,
     onBackground: BRAND.text,
     surface: BRAND.surface,
@@ -39,11 +41,11 @@ export const theme = {
     onError: '#ffffff',
     elevation: {
       level0: 'transparent',
-      level1: BRAND.surface,
-      level2: '#20203a',
-      level3: '#262645',
-      level4: '#2a2a4c',
-      level5: '#2e2e52',
+      level1: '#ffffff',
+      level2: '#f6f7fc',
+      level3: '#f1f3f9',
+      level4: '#eceff7',
+      level5: '#e7ebf4',
     },
   },
 };
@@ -58,8 +60,12 @@ export const C = {
   muted: BRAND.muted,
   border: BRAND.border,
   danger: BRAND.danger,
-  onAccent: '#001620',
+  warn: BRAND.warn,
+  onAccent: '#ffffff',
 };
+
+// Status bar: dark icons read on the light header background.
+export const statusBarStyle = 'dark';
 
 // Pain scale colours (0 = green … 10 = deep red). Shared by every screen.
 const PAIN_COLORS = [

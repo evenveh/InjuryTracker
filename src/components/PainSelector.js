@@ -23,7 +23,10 @@ export default function PainSelector({ value, onChange }) {
               ]}
             >
               <Text
-                style={[styles.btnText, selected && styles.btnTextSelected]}
+                style={[
+                  styles.btnText,
+                  { color: filled ? '#fff' : C.muted },
+                ]}
               >
                 {i}
               </Text>
@@ -53,15 +56,11 @@ const styles = StyleSheet.create({
   btnSelected: {
     transform: [{ scale: 1.25 }],
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: C.text,
   },
   btnText: {
-    color: 'rgba(255,255,255,0.6)',
     fontSize: 11,
     fontWeight: '600',
-  },
-  btnTextSelected: {
-    color: '#fff',
   },
   label: {
     textAlign: 'center',
