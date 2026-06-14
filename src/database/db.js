@@ -209,6 +209,20 @@ export function removeActivity(activityId) {
   getDb().runSync('DELETE FROM activities WHERE id = ?', [activityId]);
 }
 
+export function updateActivity(activityId, { type, durationMin, distanceKm, notes }) {
+  getDb().runSync(
+    'UPDATE activities SET type = ?, duration_min = ?, distance_km = ?, notes = ? WHERE id = ?',
+    [type, durationMin ?? null, distanceKm ?? null, notes ?? '', activityId]
+  );
+}
+
+// Removes an activity's exercises; their sets cascade-delete (FK ON DELETE
+// CASCADE). Used when re-saving an edited strength activity: we wipe the old
+// exercises/sets and re-insert from the edited form.
+export function deleteExercisesForActivity(activityId) {
+  getDb().runSync('DELETE FROM exercises WHERE activity_id = ?', [activityId]);
+}
+
 // ─── Exercises ────────────────────────────────────────────────────────────────
 
 export function createExercise(activityId, name, orderIdx) {

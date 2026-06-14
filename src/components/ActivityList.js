@@ -24,6 +24,8 @@ import {
   createExercise,
   createExerciseSet,
   removeActivity,
+  updateActivity,
+  deleteExercisesForActivity,
   getExerciseNames,
 } from '../database/db';
 import { C, RADIUS } from '../theme';
@@ -56,7 +58,7 @@ export const ACTIVITY_ICON = Object.fromEntries(
 
 // ─── Add-activity modal ────────────────────────────────────────────────────────
 
-function AddModal({ visible, onClose, onSaved }) {
+function AddModal({ visible, editActivity, onClose, onSaved }) {
   const [type, setType] = useState(null);
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
@@ -68,9 +70,33 @@ function AddModal({ visible, onClose, onSaved }) {
   const [knownNames, setKnownNames] = useState([]);
   const [focusedEx, setFocusedEx] = useState(null);
 
+  // When the sheet opens: load known names, and either prefill from the activity
+  // being edited or start blank for a new one.
   useEffect(() => {
-    if (visible) setKnownNames(getExerciseNames());
-  }, [visible]);
+    if (!visible) return;
+    setKnownNames(getExerciseNames());
+    if (editActivity) {
+      setType(editActivity.type);
+      setDuration(editActivity.duration_min != null ? String(editActivity.duration_min) : '');
+      setDistance(editActivity.distance_km != null ? String(editActivity.distance_km) : '');
+      setNotes(editActivity.notes || '');
+      setExercises(
+        (editActivity.exercises || []).map((ex) => ({
+          name: ex.name,
+          sets: (ex.sets || []).map((st) => ({
+            weight: st.weight_kg != null ? String(st.weight_kg) : '',
+            reps: st.reps != null ? String(st.reps) : '',
+          })),
+        }))
+      );
+    } else {
+      setType(null);
+      setDuration('');
+      setDistance('');
+      setNotes('');
+      setExercises([]);
+    }
+  }, [visible, editActivity]);
 
   // Up to 5 known names that contain the typed text (but aren't already an
   // exact match), so tapping one reuses the existing spelling.
@@ -154,7 +180,9 @@ function AddModal({ visible, onClose, onSaved }) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={m.header}>
-            <Text variant="titleLarge" style={m.title}>Add activity</Text>
+            <Text variant="titleLarge" style={m.title}>
+              {editActivity ? 'Edit activity' : 'Add activity'}
+            </Text>
             <IconButton icon="close" size={22} onPress={close} />
           </View>
           <Divider />
@@ -340,7 +368,7 @@ function AddModal({ visible, onClose, onSaved }) {
                 style={m.saveBtn}
                 contentStyle={{ paddingVertical: 6 }}
               >
-                Save activity
+                {editActivity ? 'Save changes' : 'Save activity'}
               </Button>
             )}
           </ScrollView>
@@ -353,25 +381,35 @@ function AddModal({ visible, onClose, onSaved }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function ActivityList({ activities, logId, onChange }) {
-  const [showModal, setShowModal] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null); // activity being edited, or null
+
+  const openCreate = () => { setEditTarget(null); setModalOpen(true); };
+  const openEdit = (act) => { setEditTarget(act); setModalOpen(true); };
+
+  // Insert the strength exercises/sets from the form under a given activity id.
+  const insertExercises = (actId, exercises) => {
+    exercises.forEach((ex, exIdx) => {
+      if (!ex.name.trim()) return;
+      const exId = createExercise(actId, ex.name.trim(), exIdx);
+      ex.sets.forEach((s, si) => {
+        const w = parseFloat(s.weight) || null;
+        const r = parseInt(s.reps, 10) || null;
+        if (w !== null || r !== null) createExerciseSet(exId, si + 1, w, r);
+      });
+    });
+  };
 
   const handleSaved = ({ type, durationMin, distanceKm, notes, exercises }) => {
-    const actId = createActivity(logId, { type, durationMin, distanceKm, notes });
-
-    if (type === 'styrke') {
-      exercises.forEach((ex, exIdx) => {
-        if (!ex.name.trim()) return;
-        const exId = createExercise(actId, ex.name.trim(), exIdx);
-        ex.sets.forEach((s, si) => {
-          const w = parseFloat(s.weight) || null;
-          const r = parseInt(s.reps, 10) || null;
-          if (w !== null || r !== null) {
-            createExerciseSet(exId, si + 1, w, r);
-          }
-        });
-      });
+    if (editTarget) {
+      // Update the row, then replace its exercises/sets wholesale.
+      updateActivity(editTarget.id, { type, durationMin, distanceKm, notes });
+      deleteExercisesForActivity(editTarget.id);
+      if (type === 'styrke') insertExercises(editTarget.id, exercises);
+    } else {
+      const actId = createActivity(logId, { type, durationMin, distanceKm, notes });
+      if (type === 'styrke') insertExercises(actId, exercises);
     }
-
     onChange();
   };
 
@@ -408,7 +446,7 @@ export default function ActivityList({ activities, logId, onChange }) {
   return (
     <View>
       {activities.map((act) => (
-        <Card key={act.id} mode="contained" style={s.row}>
+        <Card key={act.id} mode="contained" style={s.row} onPress={() => openEdit(act)}>
           <Card.Title
             title={
               ACTIVITY_LABEL[act.type] +
@@ -442,15 +480,16 @@ export default function ActivityList({ activities, logId, onChange }) {
       <Button
         mode="outlined"
         icon="plus"
-        onPress={() => setShowModal(true)}
+        onPress={openCreate}
         style={s.addBtn}
       >
         Add activity
       </Button>
 
       <AddModal
-        visible={showModal}
-        onClose={() => setShowModal(false)}
+        visible={modalOpen}
+        editActivity={editTarget}
+        onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
       />
     </View>
