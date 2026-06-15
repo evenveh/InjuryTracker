@@ -14,7 +14,7 @@ One goal of this development from the user side is learning. Make sure you teach
 
 - **Expo SDK 56** / **React Native 0.85** (bare workflow — `android/` is committed)
 - **expo-sqlite** for local storage (survives app updates)
-- **@react-navigation/bottom-tabs** — three tabs: Today / History / Export
+- **@react-navigation/bottom-tabs** — four tabs: Today / History / Insights / Export
 - **react-native-paper** (Material Design 3 light theme) for the UI;
   **@expo/vector-icons** (`MaterialCommunityIcons`) for all icons. Paper renders icons
   through an adapter in `src/theme.js`, so icon fonts load via **expo-font** — no native
@@ -27,17 +27,30 @@ One goal of this development from the user side is learning. Make sure you teach
 
 ```
 index.js                      ← registerRootComponent(App)  ← DO NOT DELETE (see gotchas)
-App.js                        ← PaperProvider + navigation + initDatabase()
+App.js                        ← PaperProvider + navigation (4 tabs) + initDatabase()
 src/theme.js                  ← Paper MD3 light theme, design tokens, pain-colour util, vector-icon adapter
-src/database/db.js            ← all SQLite (getOrCreateLog, updateLog, deleteLogIfEmpty…)
-src/screens/TodayScreen.js    ← per-day logging; ‹/› date nav to back-fill past days
-src/screens/HistoryScreen.js  ← list + detail view
-src/screens/ExportScreen.js   ← CSV (UTF-8 BOM) + JSON backup
-src/components/PainSelector.js, SymptomPicker.js, ActivityList.js
+src/database/db.js            ← all SQLite: logs/symptoms/activities/exercises/sets,
+                                migrations, db_meta (export folder), and analytics queries
+src/screens/TodayScreen.js    ← per-day logging; ‹/› date nav to back-fill/edit past days
+src/screens/HistoryScreen.js  ← list + detail; ✏️ opens the day in Today for editing
+src/screens/InsightsScreen.js ← analytics: pain-over-time, activity/exercise impact, load, symptoms
+src/screens/ExportScreen.js   ← CSV (UTF-8 BOM) + JSON; share OR save-to-device (SAF)
+src/components/PainSelector.js, SymptomPicker.js,
+src/components/ActivityList.js ← add/edit activity sheet, exercise name type-ahead
 ```
 
 DB rows use **language-independent keys** (`styrke`, `sykling`, `stairs_up`…); only the
 display labels are English. Never change these keys — it breaks existing data.
+
+**Analytics modelling note:** "what provokes the injury" is computed against **next-day**
+pain (pain often shows up the day after), at both activity-type and **exercise** level —
+squats/deadlifts load the knee differently than bench/biceps, so a single "Strength"
+average would hide the signal. All insight queries live in `db.js`; everything guards on
+`n` (occurrence count) and is framed as associations, not conclusions.
+
+**Schema migrations:** `CREATE TABLE IF NOT EXISTS` never alters an existing table, so new
+columns are added with `ALTER TABLE` guarded by a `PRAGMA table_info` check (see
+`initDatabase` + `_columnExists`). `distance_km` on `activities` was added this way.
 
 `applicationId` is `com.evenv.skadeoppfolgingsapp`. **Do not change it** — a new id makes
 Android treat it as a different app and the user loses their SQLite history.
@@ -104,7 +117,9 @@ cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker\android
     `ninja: error: mkdir(…react_codegen_safeareacontext.dir/…): No such file or directory`
     on the `armeabi-v7a` ABI (arm64-v8a's path is ~2 chars shorter, just under the limit).
     The phone only supports arm64-v8a anyway, so the other ABIs are dead weight — this also
-    cuts the APK from ~80 MB to ~32 MB and speeds up the build.
+    cuts the APK from ~80 MB to ~32 MB and speeds up the build. Note: Windows
+    `LongPathsEnabled=1` is already ON here but does **not** help — ninja/CMake don't use the
+    `\\?\` prefix, so the NDK build still hits the 260-char wall. arm64-only is the real fix.
 
 12. **expo-file-system: import from `expo-file-system/legacy`.** In SDK 56 the classic
     `FileSystem.writeAsStringAsync` / `documentDirectory` / `EncodingType` API is deprecated
@@ -121,3 +136,19 @@ cd C:\Users\evenv\Documents\CodingProjects\InjuryTracker\android
     `height: 60 + insets.bottom`, `paddingBottom: 8 + insets.bottom`. The hook must run in a
     component **inside** the provider (App renders the provider, so it can't read insets
     itself).
+
+14. **Build date keys (`YYYY-MM-DD`) from LOCAL date parts, never `toISOString()`.**
+    `toISOString()` converts to UTC; in a positive-offset timezone (CEST = UTC+2) that rolls
+    the date back a day. It made the `‹/›` date nav jump two days back and the `›` (forward)
+    do nothing, and would skew the next-day analytics. Use a helper that reads
+    `getFullYear()/getMonth()/getDate()` (see `toDateStr`/`nextDateStr`). Display formatting
+    via `toLocaleDateString` is fine — it's only the key arithmetic that must stay local.
+
+15. **No local image rasterizer; the launcher icon is static PNGs.** `convert` on this
+    machine is **Windows' `convert.exe`** (filesystem tool), NOT ImageMagick — there is no
+    `magick`/`inkscape`/`sharp`. So don't try to generate/resize icons here; use pre-rendered
+    PNGs or Android Studio's *Image Asset Studio*. The current launcher icon is a single
+    full-bleed squircle PNG copied into every `mipmap-*dpi/ic_launcher{,_round}.png` (no
+    `mipmap-anydpi-v26` adaptive XML — the adaptive foreground/background drawables weren't
+    available). `app.json` `icon` does nothing without prebuild; the `res/` mipmaps are the
+    source of truth.

@@ -11,6 +11,7 @@ import { initDatabase } from './src/database/db';
 import { theme, paperSettings, C, statusBarStyle } from './src/theme';
 import TodayScreen from './src/screens/TodayScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
+import InsightsScreen from './src/screens/InsightsScreen';
 import ExportScreen from './src/screens/ExportScreen';
 
 const Tab = createBottomTabNavigator();
@@ -40,6 +41,7 @@ const screenOptions = {
 const TABS = {
   Today: 'notebook-edit-outline',
   History: 'history',
+  Insights: 'chart-line',
   Export: 'export-variant',
 };
 
@@ -77,6 +79,7 @@ function Tabs() {
       >
         <Tab.Screen name="Today" component={TodayScreen} />
         <Tab.Screen name="History" component={HistoryScreen} />
+        <Tab.Screen name="Insights" component={InsightsScreen} />
         <Tab.Screen name="Export" component={ExportScreen} />
       </Tab.Navigator>
     </NavigationContainer>

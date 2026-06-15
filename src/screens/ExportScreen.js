@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Card, Button, Icon } from 'react-native-paper';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 
-import { getFullExportData, getMeta, setMeta } from '../database/db';
+import { getFullExportData, getMeta, setMeta, importBackup } from '../database/db';
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import { ACTIVITY_LABEL } from '../components/ActivityList';
 import { C } from '../theme';
@@ -180,6 +181,46 @@ export default function ExportScreen() {
       ok ? `${p.baseName}.${p.ext} was written to the folder you picked.` : null
     );
 
+  // Restore: pick a JSON backup, parse it, confirm, then import.
+  const importFile = async () => {
+    try {
+      setBusy('import');
+      const res = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+      if (res.canceled) return;
+      const content = await FileSystem.readAsStringAsync(res.assets[0].uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const data = JSON.parse(content);
+      const count = Array.isArray(data) ? data.length : 0;
+      if (!count) { Alert.alert('Nothing to import', 'The file has no day entries.'); return; }
+      Alert.alert(
+        'Import backup?',
+        `This loads ${count} day(s) and overwrites any matching dates.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Import',
+            onPress: () => {
+              try {
+                const r = importBackup(data);
+                Alert.alert('Imported ✓', `${r.days} day(s) loaded.`);
+              } catch (e) {
+                Alert.alert('Import failed', e.message);
+              }
+            },
+          },
+        ]
+      );
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <SafeAreaView style={s.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={s.content}>
@@ -243,6 +284,27 @@ export default function ExportScreen() {
               contentStyle={s.btnContent}
             >
               Save to device
+            </Button>
+          </Card.Content>
+        </Card>
+
+        <Card mode="elevated" elevation={2} style={s.card}>
+          <Card.Content>
+            <Text variant="titleMedium" style={s.cardTitle}>Restore from backup</Text>
+            <Text style={s.cardDesc}>
+              Load a JSON backup file. Each day in the file overwrites that date;
+              days not in the file are kept. Use this to restore after reinstalling
+              or to seed history.
+            </Text>
+            <Button
+              mode="outlined"
+              icon="database-import-outline"
+              onPress={importFile}
+              disabled={isBusy}
+              loading={busy === 'import'}
+              contentStyle={s.btnContent}
+            >
+              Import JSON backup
             </Button>
           </Card.Content>
         </Card>

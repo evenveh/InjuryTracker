@@ -1,0 +1,1141 @@
+[
+  {
+    "date": "2026-04-06",
+    "pain_level": 0,
+    "notes": "Første økt etter sykdom. Ingen vondt i kne.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-07",
+    "pain_level": 0,
+    "notes": "Ingen vondt.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 120,
+                "reps": 5
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 140,
+                "reps": 4
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 130,
+                "reps": 5
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 130,
+                "reps": 5
+              },
+              {
+                "set_number": 5,
+                "weight_kg": 130,
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "name": "Romanian deadlift",
+            "order_idx": 1,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 100,
+                "reps": 8
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 100,
+                "reps": 8
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 100,
+                "reps": 8
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 100,
+                "reps": 8
+              }
+            ]
+          },
+          {
+            "name": "Leg curl",
+            "order_idx": 2,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 60,
+                "reps": 8
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 60,
+                "reps": 8
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 60,
+                "reps": 8
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 60,
+                "reps": 8
+              }
+            ]
+          },
+          {
+            "name": "Hip thrust",
+            "order_idx": 3,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 140,
+                "reps": 10
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 140,
+                "reps": 10
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 140,
+                "reps": 10
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 140,
+                "reps": 10
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-04-08",
+    "pain_level": 0,
+    "notes": "Ingen smerter. Ganske slitsomt.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "sykling",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "staking",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-04-09",
+    "pain_level": 0,
+    "notes": "Ingen smerter",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-10",
+    "pain_level": 0,
+    "notes": "Kjørte veldig høy knebøy til boks med 100kg, 5 reps. Ingen smerter før eller etter. Så vanlig beinøkt etter, uten Markløft.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Box squat",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 100,
+                "reps": 5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-04-11",
+    "pain_level": 0,
+    "notes": "Ingen smerter",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-12",
+    "pain_level": 0,
+    "notes": "Ingen smerter. Gikk en lang tur i byen. Ble en del skritt i natt også.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "tur",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-04-13",
+    "pain_level": 0,
+    "notes": "Ingen smerter. Benkeøkt.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Bench press",
+            "order_idx": 0,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-04-14",
+    "pain_level": 1,
+    "notes": "Noe stikking i starten av dagen når jeg skulle gå i trappa mildt. Gav seg fort.",
+    "symptoms": [
+      "morning",
+      "stairs_up"
+    ],
+    "activities": []
+  },
+  {
+    "date": "2026-04-15",
+    "pain_level": 0,
+    "notes": "Bra. Svømmer. Føles ok etterpå, men ble en veldig rolig økt. Litt beinspark.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "svomming",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-04-16",
+    "pain_level": 1,
+    "notes": "Mulig det er litt mer sårt. Ikke mye, men føles litt dårligere ut.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-17",
+    "pain_level": 0,
+    "notes": "Bra!",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-18",
+    "pain_level": 0,
+    "notes": "Bra!",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-19",
+    "pain_level": 0,
+    "notes": "Bra!",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-20",
+    "pain_level": 0,
+    "notes": "Bra!",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-21",
+    "pain_level": 0,
+    "notes": "Både knebøy og Markløft i dag. Vurdere å droppe en øvelse her. Kanskje strak mark ryker.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 140,
+                "reps": 4
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 140,
+                "reps": 4
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 140,
+                "reps": 4
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 140,
+                "reps": 4
+              },
+              {
+                "set_number": 5,
+                "weight_kg": 130,
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "name": "Squat",
+            "order_idx": 1,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 110,
+                "reps": 5
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 110,
+                "reps": 5
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 110,
+                "reps": 5
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 115,
+                "reps": 5
+              },
+              {
+                "set_number": 5,
+                "weight_kg": 115,
+                "reps": 5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-04-22",
+    "pain_level": 1,
+    "notes": "Litt ish, men stort sett bra. Kjører staking i dag. Dropper sykkel. 10 min ellipse.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "staking",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "ellipse",
+        "duration_min": 10,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-04-23",
+    "pain_level": 0,
+    "notes": "Ganske bra.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-24",
+    "pain_level": 1,
+    "notes": "Småstikking, men ikke sånn at jeg tror det gjør noe. Kjører veldig høy bøy. Prøver å holde vinkelen i ankelen lik eller mindre enn i Markløft.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Squat",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 120,
+                "reps": 5
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 130,
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "name": "Romanian deadlift",
+            "order_idx": 1,
+            "sets": []
+          },
+          {
+            "name": "Leg curl",
+            "order_idx": 2,
+            "sets": []
+          },
+          {
+            "name": "Hip thrust",
+            "order_idx": 3,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-04-25",
+    "pain_level": 1,
+    "notes": "Samme som dagen før.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-26",
+    "pain_level": 0,
+    "notes": "Ok",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-04-27",
+    "pain_level": 0,
+    "notes": "Ok. Trente mark 5 reps + knebøy 8 reps. Ingen smerter under økta.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": null,
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "name": "Squat",
+            "order_idx": 1,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": null,
+                "reps": 8
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-04-28",
+    "pain_level": 1,
+    "notes": "Småstikking. Gikk 20000 steg. Merka det i slutten av dagen.",
+    "symptoms": [
+      "walking"
+    ],
+    "activities": [
+      {
+        "type": "tur",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-04-29",
+    "pain_level": 1,
+    "notes": "Småstikking opp trappene.",
+    "symptoms": [
+      "stairs_up"
+    ],
+    "activities": []
+  },
+  {
+    "date": "2026-04-30",
+    "pain_level": 2,
+    "notes": "Litt sår i dag også. Skal ha bein, men dropper knebøy. Tar Markløft og bakside. Gjør dette så lenge kneet viser symptomer.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-01",
+    "pain_level": 2,
+    "notes": "Litt sår. Gikk mye på feltstevne og var enda mer sår på kvelden.",
+    "symptoms": [
+      "walking"
+    ],
+    "activities": [
+      {
+        "type": "tur",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-05-02",
+    "pain_level": 2,
+    "notes": "Fortsatt litt sår. Kjenner det i trappene. Ble ny runde på feltstevne i dag og er mer sår på kvelden. Roet seg litt etterhvert.",
+    "symptoms": [
+      "stairs_up",
+      "walking"
+    ],
+    "activities": [
+      {
+        "type": "tur",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-05-03",
+    "pain_level": 2,
+    "notes": "Litt sår på morgenen. Ikke så galt, men ca samme som lørdag. Prøve høye utfall?",
+    "symptoms": [
+      "morning"
+    ],
+    "activities": []
+  },
+  {
+    "date": "2026-05-04",
+    "pain_level": 3,
+    "notes": "Merker at det er sårt. Til og med ned trappene. Første gang jeg har hatt det på en stund. Skal ta benk press med beina opp i dag, og dropper bein i morgen.",
+    "symptoms": [
+      "stairs_down"
+    ],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Bench press",
+            "order_idx": 0,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-05",
+    "pain_level": 2,
+    "notes": "Ganske likt. Kanskje litt bedre. Dropper Markløft, men trener bakside.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-06",
+    "pain_level": 2,
+    "notes": "Merker også at sitting gjør kneet sårt. Sånn det pleide å være før. Har ikke lagt merke til at disse symptomene forsvant.",
+    "symptoms": [
+      "sitting"
+    ],
+    "activities": []
+  },
+  {
+    "date": "2026-05-07",
+    "pain_level": 2,
+    "notes": "Ble gradvis bedre. Fortsatt ingen beintrening.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-08",
+    "pain_level": 1,
+    "notes": "Ble gradvis bedre. Fortsatt ingen beintrening.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-09",
+    "pain_level": 1,
+    "notes": "Ble gradvis bedre. Fortsatt ingen beintrening.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-10",
+    "pain_level": 0,
+    "notes": "Ble gradvis bedre. Fortsatt ingen beintrening.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-11",
+    "pain_level": 1,
+    "notes": "Begynner å bli bra, men kjenner fortsatt at det stikker litt i trappene. Vanlig brystøkt, men holder mer vertikal vinkel i knæra på benkpress.",
+    "symptoms": [
+      "stairs_up"
+    ],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Bench press",
+            "order_idx": 0,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-12",
+    "pain_level": 1,
+    "notes": "Mulig mindre stikking. Kjører Markløft i dag, men holder meg unna alt på quads.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-13",
+    "pain_level": 1,
+    "notes": "Ganske likt. Ingen trening.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-14",
+    "pain_level": 1,
+    "notes": "Greit. Lite stikking.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-15",
+    "pain_level": 1,
+    "notes": "Samme. Trente 5x5 på 130 i mark, en ny øvelse på glutes, Hip thrust, strak mark og leg curl.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 130,
+                "reps": 5
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 130,
+                "reps": 5
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 130,
+                "reps": 5
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 130,
+                "reps": 5
+              },
+              {
+                "set_number": 5,
+                "weight_kg": 130,
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "name": "Glute machine",
+            "order_idx": 1,
+            "sets": []
+          },
+          {
+            "name": "Hip thrust",
+            "order_idx": 2,
+            "sets": []
+          },
+          {
+            "name": "Romanian deadlift",
+            "order_idx": 3,
+            "sets": []
+          },
+          {
+            "name": "Leg curl",
+            "order_idx": 4,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-16",
+    "pain_level": 3,
+    "notes": "Definitivt mer sår. Ikke helt sykt, men mer sår. Mistenker den nye glutemaskinen kan ha påvirka noe. Ble en del fleks i kneet. Kjører en sykkeløkt og staking.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "sykling",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "staking",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-05-17",
+    "pain_level": 0,
+    "notes": "Ganske god.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-18",
+    "pain_level": 0,
+    "notes": "Bra. Nesten smertefri",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-19",
+    "pain_level": 0,
+    "notes": "Samme som i går.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-20",
+    "pain_level": 0,
+    "notes": "Sykler i 20 min, skiergo i 20 min. Slitsomt. Ingen smerter.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "sykling",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "staking",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-05-21",
+    "pain_level": 0,
+    "notes": "Bra",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-22",
+    "pain_level": 0,
+    "notes": "Bra, 5x5 Markløft",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": null,
+                "reps": 5
+              },
+              {
+                "set_number": 2,
+                "weight_kg": null,
+                "reps": 5
+              },
+              {
+                "set_number": 3,
+                "weight_kg": null,
+                "reps": 5
+              },
+              {
+                "set_number": 4,
+                "weight_kg": null,
+                "reps": 5
+              },
+              {
+                "set_number": 5,
+                "weight_kg": null,
+                "reps": 5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-23",
+    "pain_level": 0,
+    "notes": "Bra, sykling + skiergo",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "sykling",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "staking",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-05-24",
+    "pain_level": 0,
+    "notes": "Bra",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-25",
+    "pain_level": 1,
+    "notes": "Bra, benkpress. Kanskje litt sårt på kvelden, men ikke mye.",
+    "symptoms": [
+      "after_exercise"
+    ],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Bench press",
+            "order_idx": 0,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-26",
+    "pain_level": 1,
+    "notes": "Bra, tung Markløft: 140,155,162,170,140. Ingen smerter under Markløft. Lett sårhet på Hip thrust (vanlig).",
+    "symptoms": [
+      "during_exercise"
+    ],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 140,
+                "reps": null
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 155,
+                "reps": null
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 162,
+                "reps": null
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 170,
+                "reps": null
+              },
+              {
+                "set_number": 5,
+                "weight_kg": 140,
+                "reps": null
+              }
+            ]
+          },
+          {
+            "name": "Hip thrust",
+            "order_idx": 1,
+            "sets": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-05-27",
+    "pain_level": 1,
+    "notes": "Bra. 20 min sykling, 20 min staking. Slitsomt. Kjente litt sårhet i kneet i etterkant. Ikke mye, men litt.",
+    "symptoms": [
+      "after_exercise"
+    ],
+    "activities": [
+      {
+        "type": "sykling",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "staking",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  },
+  {
+    "date": "2026-05-28",
+    "pain_level": 2,
+    "notes": "Litt mer sårt. Ikke galt, men mer enn i går på denne tida. Rart at det varierer selv om jeg kjører samme kondisøkt.",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-29",
+    "pain_level": 0,
+    "notes": "Bra",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-30",
+    "pain_level": 0,
+    "notes": "Bra",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-05-31",
+    "pain_level": 0,
+    "notes": "Bra",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-06-01",
+    "pain_level": 0,
+    "notes": "Bra",
+    "symptoms": [],
+    "activities": []
+  },
+  {
+    "date": "2026-06-02",
+    "pain_level": 0,
+    "notes": "Bra, opp til 160x2 på mark, og testa litt bulgarsk utfall: 10kg 4x5. Lett, med høy vinkel.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "styrke",
+        "duration_min": null,
+        "distance_km": null,
+        "notes": "",
+        "exercises": [
+          {
+            "name": "Deadlift",
+            "order_idx": 0,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 160,
+                "reps": 2
+              }
+            ]
+          },
+          {
+            "name": "Bulgarian split squat",
+            "order_idx": 1,
+            "sets": [
+              {
+                "set_number": 1,
+                "weight_kg": 10,
+                "reps": 5
+              },
+              {
+                "set_number": 2,
+                "weight_kg": 10,
+                "reps": 5
+              },
+              {
+                "set_number": 3,
+                "weight_kg": 10,
+                "reps": 5
+              },
+              {
+                "set_number": 4,
+                "weight_kg": 10,
+                "reps": 5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "date": "2026-06-03",
+    "pain_level": 0,
+    "notes": "Bra. Sykling og staking, 20 min hver.",
+    "symptoms": [],
+    "activities": [
+      {
+        "type": "sykling",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      },
+      {
+        "type": "staking",
+        "duration_min": 20,
+        "distance_km": null,
+        "notes": "",
+        "exercises": []
+      }
+    ]
+  }
+]
