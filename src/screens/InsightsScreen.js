@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Card, Icon } from 'react-native-paper';
@@ -27,6 +27,11 @@ function shortDate(dateStr) {
 // ─── A. Pain over time ─────────────────────────────────────────────────────────
 
 function PainTimeline({ series }) {
+  // Default the horizontal scroll to the right edge (latest data) instead of
+  // the left (earliest). scrollToEnd is fired from onContentSizeChange so it
+  // runs once the bars are laid out — and again whenever new data comes in.
+  const scrollRef = useRef(null);
+
   if (series.length < 2) {
     return <Text style={s.empty}>Log a few days to see your pain trend.</Text>;
   }
@@ -39,9 +44,11 @@ function PainTimeline({ series }) {
           <Text style={s.axisLabel}>0</Text>
         </View>
         <ScrollView
+          ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.bars}
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {series.map((p) => (
             <View key={p.date} style={s.barSlot}>
