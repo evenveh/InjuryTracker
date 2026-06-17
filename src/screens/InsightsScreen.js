@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Card, Icon, Chip } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
+import Svg, { Polyline, Circle, Line, Rect, Text as SvgText } from 'react-native-svg';
 
 import {
   getPainSeries,
@@ -20,6 +21,11 @@ const MIN_OCCURRENCES = 3; // need this many sessions before showing a signal
 const MAX_EXERCISES = 10; // strength card shows only the 10 most pain-linked exercises
 const PLOT_H = 130;
 const GOOD = '#16a34a';
+// Distinct line colours for the volume chart, indexed by selection order.
+const SERIES_COLORS = [
+  '#2563eb', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6',
+  '#ec4899', '#14b8a6', '#a16207', '#0ea5e9', '#6366f1',
+];
 
 // ─── Reusable scrolling bar chart ──────────────────────────────────────────────
 // A horizontal, scroll-to-latest bar chart with a y-axis, a sparse date x-axis,
@@ -97,22 +103,157 @@ function PainTimeline({ series }) {
   );
 }
 
-// ─── Volume per exercise ────────────────────────────────────────────────────────
+// ─── Volume per exercise (line chart) ───────────────────────────────────────────
+// One or more exercises overlaid as lines on a shared kg axis, so they're directly
+// comparable. The x-axis is the union of every logged day across the selected
+// exercises; a line bridges days an exercise wasn't done (the usual line-chart
+// caveat). Uses react-native-svg for real polylines. The chart fits the card width
+// (measured via onLayout) rather than scrolling, so all series show side by side.
 
-function ExerciseVolumeChart({ series }) {
-  const maxVol = series.length ? Math.max(...series.map((p) => p.volume)) : 0;
-  if (maxVol <= 0) {
-    return <Text style={s.empty}>No weighted volume logged for this exercise yet.</Text>;
+const LINE_PAD = { left: 46, right: 14, top: 10, bottom: 22 };
+
+// "Nice" rounded y-axis ticks: ~`count` intervals ending on a clean number, so
+// the axis reads 0 / 400 / 800 / 1200 rather than 0 / 1057. Returns the tick
+// values plus the rounded-up max the chart should scale to.
+function niceTicks(max, count) {
+  if (max <= 0) return { ticks: [0], niceMax: 1 };
+  const rawStep = max / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const niceStep = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+  const niceMax = Math.ceil(max / niceStep) * niceStep;
+  const ticks = [];
+  for (let v = 0; v <= niceMax + niceStep / 2; v += niceStep) ticks.push(Math.round(v));
+  return { ticks, niceMax };
+}
+
+function VolumeLineChart({ seriesList }) {
+  const [width, setWidth] = useState(0);
+  const [tip, setTip] = useState(null); // tapped point: { key, x, y, main, sub }
+
+  const allDates = Array.from(
+    new Set(seriesList.flatMap((ser) => ser.points.map((p) => p.date)))
+  ).sort();
+  const maxVol = Math.max(0, ...seriesList.flatMap((ser) => ser.points.map((p) => p.volume)));
+
+  if (allDates.length === 0 || maxVol <= 0) {
+    return (
+      <Text style={s.empty}>No weighted volume logged for the selected exercise(s) yet.</Text>
+    );
   }
+
+  const plotW = Math.max(1, width - LINE_PAD.left - LINE_PAD.right);
+  const plotH = PLOT_H - LINE_PAD.top - LINE_PAD.bottom;
+  const { ticks, niceMax } = niceTicks(maxVol, 4);
+  const xAt = (date) => {
+    const i = allDates.indexOf(date);
+    return allDates.length === 1
+      ? LINE_PAD.left + plotW / 2
+      : LINE_PAD.left + (i / (allDates.length - 1)) * plotW;
+  };
+  const yAt = (vol) => LINE_PAD.top + (1 - vol / niceMax) * plotH;
+  const xStep = Math.max(1, Math.ceil(allDates.length / X_TICK_TARGET));
+
+  // Tap a point to pin/unpin a tooltip with its value.
+  const tapPoint = (ser, p) => {
+    const key = `${ser.name}@${p.date}`;
+    setTip((prev) =>
+      prev && prev.key === key
+        ? null
+        : {
+            key,
+            x: xAt(p.date),
+            y: yAt(p.volume),
+            main: `${Math.round(p.volume)} kg`,
+            sub: `${ser.name} · ${formatDayMonthSlash(p.date)}`,
+          }
+    );
+  };
+
+  // Tooltip box, clamped to stay inside the chart width.
+  let tipBox = null;
+  if (tip) {
+    const w = Math.max(tip.main.length, tip.sub.length) * 6 + 14;
+    const h = 30;
+    const x = Math.max(2, Math.min(tip.x - w / 2, width - w - 2));
+    const y = tip.y - h - 8 < 0 ? tip.y + 10 : tip.y - h - 8;
+    tipBox = { x, y, w, h };
+  }
+
   return (
-    <BarChart
-      data={series.map((p) => ({ key: p.date, date: p.date, value: p.volume }))}
-      maxValue={maxVol}
-      yLabels={[`${Math.round(maxVol)}`, '0']}
-      yAxisWidth={44}
-      barColor={() => C.accent}
-      caption={`${formatDayMonth(series[0].date)} → ${formatDayMonth(series[series.length - 1].date)} · ${series.length} sessions`}
-    />
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <Svg width={width} height={PLOT_H}>
+          {/* horizontal gridlines + y-axis value labels */}
+          {ticks.map((t) => (
+            <React.Fragment key={t}>
+              <Line
+                x1={LINE_PAD.left}
+                y1={yAt(t)}
+                x2={width - LINE_PAD.right}
+                y2={yAt(t)}
+                stroke={C.inner}
+                strokeWidth="1"
+              />
+              <SvgText x={LINE_PAD.left - 6} y={yAt(t) + 3} fontSize="10" fill={C.muted} textAnchor="end">
+                {t}
+              </SvgText>
+            </React.Fragment>
+          ))}
+
+          {/* one polyline (with visible dots) per selected exercise */}
+          {seriesList.map((ser) => (
+            <React.Fragment key={ser.name}>
+              <Polyline
+                points={ser.points.map((p) => `${xAt(p.date)},${yAt(p.volume)}`).join(' ')}
+                fill="none"
+                stroke={ser.color}
+                strokeWidth="2"
+              />
+              {ser.points.map((p) => (
+                <Circle key={p.date} cx={xAt(p.date)} cy={yAt(p.volume)} r="2.5" fill={ser.color} />
+              ))}
+            </React.Fragment>
+          ))}
+
+          {/* sparse x-axis date ticks ("5/6"), always including the latest */}
+          {allDates.map((d, i) =>
+            i % xStep === 0 || i === allDates.length - 1 ? (
+              <SvgText key={d} x={xAt(d)} y={PLOT_H - 6} fontSize="9" fill={C.muted} textAnchor="middle">
+                {formatDayMonthSlash(d)}
+              </SvgText>
+            ) : null
+          )}
+
+          {/* invisible, larger tap targets over each point */}
+          {seriesList.map((ser) =>
+            ser.points.map((p) => (
+              <Circle
+                key={`${ser.name}@${p.date}`}
+                cx={xAt(p.date)}
+                cy={yAt(p.volume)}
+                r="11"
+                fill="transparent"
+                onPress={() => tapPoint(ser, p)}
+              />
+            ))
+          )}
+
+          {/* tooltip for the tapped point */}
+          {tipBox && (
+            <React.Fragment>
+              <Rect x={tipBox.x} y={tipBox.y} width={tipBox.w} height={tipBox.h} rx="4" fill={C.text} opacity="0.92" />
+              <SvgText x={tipBox.x + tipBox.w / 2} y={tipBox.y + 13} fontSize="11" fontWeight="bold" fill="#fff" textAnchor="middle">
+                {tip.main}
+              </SvgText>
+              <SvgText x={tipBox.x + tipBox.w / 2} y={tipBox.y + 24} fontSize="9" fill="#fff" textAnchor="middle">
+                {tip.sub}
+              </SvgText>
+            </React.Fragment>
+          )}
+        </Svg>
+      )}
+    </View>
   );
 }
 
@@ -178,15 +319,25 @@ export default function InsightsScreen() {
   const [exImpact, setExImpact] = useState({ baseline: null, items: [] });
   const [volumeByExercise, setVolumeByExercise] = useState({});
   const [symptoms, setSymptoms] = useState([]);
-  const [picked, setPicked] = useState(null); // which exercise the volume chart shows
+  const [picked, setPicked] = useState([]); // exercises overlaid on the volume chart
 
   useFocusEffect(
     useCallback(() => {
       setSeries(getPainSeries());
       setImpact(getActivityImpact());
-      setExImpact(getExerciseImpact());
+      const ex = getExerciseImpact();
+      setExImpact(ex);
       setVolumeByExercise(getExerciseVolumeSeries());
       setSymptoms(getSymptomStats());
+      // Seed/clean the volume selection: drop picks no longer in the top list, and
+      // default to the single most pain-linked exercise the first time.
+      const topNames = ex.items
+        .filter((i) => i.n >= MIN_OCCURRENCES)
+        .slice(0, MAX_EXERCISES)
+        .map((i) => i.name);
+      setPicked((prev) =>
+        prev.length ? prev.filter((n) => topNames.includes(n)) : topNames.slice(0, 1)
+      );
     }, [])
   );
 
@@ -199,10 +350,15 @@ export default function InsightsScreen() {
   const exHidden = exEnough.length - exTop.length + exTooFew.length;
 
   // The volume chart offers exactly the exercises shown in "Strength — by exercise".
-  // Fall back to the first (most pain-linked) when nothing is picked yet, or when a
-  // previous pick is no longer in the list (e.g. after new data shifts the top 10).
   const exTopNames = exTop.map((i) => i.name);
-  const selected = exTopNames.includes(picked) ? picked : exTopNames[0];
+  const selectedNames = picked.filter((n) => exTopNames.includes(n));
+  const volSeriesList = selectedNames.map((name, idx) => ({
+    name,
+    color: SERIES_COLORS[idx % SERIES_COLORS.length],
+    points: volumeByExercise[name] || [],
+  }));
+  const toggleExercise = (name) =>
+    setPicked((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
 
   return (
     <SafeAreaView style={s.container} edges={['left', 'right']}>
@@ -222,7 +378,8 @@ export default function InsightsScreen() {
             ) : (
               <>
                 <Text style={s.subtitle}>
-                  Training volume (weight × reps, in kg) per session. Pick an exercise:
+                  Training volume (weight × reps, in kg) per session. Tap to add or remove
+                  exercises — they share one kg axis so you can compare them.
                 </Text>
                 <ScrollView
                   horizontal
@@ -233,15 +390,31 @@ export default function InsightsScreen() {
                     <Chip
                       key={item.name}
                       compact
-                      selected={selected === item.name}
-                      onPress={() => setPicked(item.name)}
+                      selected={selectedNames.includes(item.name)}
+                      onPress={() => toggleExercise(item.name)}
                       style={s.chip}
                     >
                       {item.name}
                     </Chip>
                   ))}
                 </ScrollView>
-                <ExerciseVolumeChart series={volumeByExercise[selected] || []} />
+                {selectedNames.length === 0 ? (
+                  <Text style={s.empty}>Pick at least one exercise above.</Text>
+                ) : (
+                  <>
+                    <VolumeLineChart key={selectedNames.join('|')} seriesList={volSeriesList} />
+                    {volSeriesList.length > 1 && (
+                      <View style={s.legend}>
+                        {volSeriesList.map((ser) => (
+                          <View key={ser.name} style={s.legendItem}>
+                            <View style={[s.legendDot, { backgroundColor: ser.color }]} />
+                            <Text style={s.legendLabel}>{ser.name}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
               </>
             )}
           </Card.Content>
@@ -379,6 +552,12 @@ const s = StyleSheet.create({
   chips: { paddingBottom: 14, paddingRight: 4 },
   chip: { marginRight: 8 },
   caption: { color: C.muted, fontSize: 12, marginTop: 8, textAlign: 'center' },
+
+  // Volume line-chart legend
+  legend: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 14 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendLabel: { color: C.text, fontSize: 12 },
 
   // Impact rows
   impactRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
