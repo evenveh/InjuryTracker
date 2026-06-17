@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Card, Icon, Chip } from 'react-native-paper';
@@ -20,6 +20,9 @@ import { formatDayMonth, formatDayMonthSlash } from '../utils/date';
 const MIN_OCCURRENCES = 3; // need this many sessions before showing a signal
 const MAX_EXERCISES = 10; // strength card shows only the 10 most pain-linked exercises
 const PLOT_H = 130;
+const DAY_W = 15;        // px per day on the x-axis — shared by both charts so columns line up
+const Y_AXIS_W = 40;     // y-axis gutter width — shared so the two plot areas start at the same x
+const X_TICK_TARGET = 6; // aim for ~6 date ticks across the axis
 const GOOD = '#16a34a';
 // Distinct line colours for the volume chart, indexed by selection order.
 const SERIES_COLORS = [
@@ -28,25 +31,19 @@ const SERIES_COLORS = [
 ];
 
 // ─── Reusable scrolling bar chart ──────────────────────────────────────────────
-// A horizontal, scroll-to-latest bar chart with a y-axis, a sparse date x-axis,
-// and a caption. Pain and exercise-volume both render through this; they differ
-// only in scale, colour and labels. `data` is [{ key, date, value }].
+// Horizontal bar chart with a fixed y-axis and a sparse "5/6" date x-axis. The
+// parent owns the ScrollView ref + onScroll + onContentSizeChange so it can keep
+// this chart's horizontal position in lockstep with the volume chart (PAIN OVER
+// TIME is the master timeline). `data` is [{ key, date, value }].
 
-const X_TICK_TARGET = 6; // aim for ~6 date ticks across the visible axis
-
-function BarChart({ data, maxValue, yLabels, yAxisWidth = 22, barColor, caption }) {
-  // Default the horizontal scroll to the right edge (latest data) instead of the
-  // left (earliest). scrollToEnd fires from onContentSizeChange, so it runs once
-  // the bars are laid out — and again whenever new data comes in.
-  const scrollRef = useRef(null);
-  // Label every Nth bar so "5/6" ticks never collide; always label the last one
-  // (the most recent, which is where we scroll to).
+function BarChart({ data, maxValue, yLabels, barColor, caption, scrollRef, scrollHandlers, onContentSizeChange }) {
+  // Label every Nth bar so "5/6" ticks never collide; always label the last one.
   const step = Math.max(3, Math.ceil(data.length / X_TICK_TARGET));
 
   return (
     <View>
       <View style={s.plotRow}>
-        <View style={[s.yAxis, { width: yAxisWidth }]}>
+        <View style={[s.yAxis, { width: Y_AXIS_W }]}>
           {yLabels.map((label) => (
             <Text key={label} style={s.axisLabel}>{label}</Text>
           ))}
@@ -56,7 +53,8 @@ function BarChart({ data, maxValue, yLabels, yAxisWidth = 22, barColor, caption 
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.bars}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={onContentSizeChange}
+          {...scrollHandlers}
         >
           {data.map((p, i) => {
             const showTick = i % step === 0 || i === data.length - 1;
@@ -88,7 +86,7 @@ function BarChart({ data, maxValue, yLabels, yAxisWidth = 22, barColor, caption 
 
 // ─── A. Pain over time ─────────────────────────────────────────────────────────
 
-function PainTimeline({ series }) {
+function PainTimeline({ series, scrollRef, scrollHandlers, onContentSizeChange }) {
   if (series.length < 2) {
     return <Text style={s.empty}>Log a few days to see your pain trend.</Text>;
   }
@@ -99,18 +97,21 @@ function PainTimeline({ series }) {
       yLabels={['10', '5', '0']}
       barColor={(v) => getPainColor(v)}
       caption={`${formatDayMonth(series[0].date)} → ${formatDayMonth(series[series.length - 1].date)} · ${series.length} days`}
+      scrollRef={scrollRef}
+      scrollHandlers={scrollHandlers}
+      onContentSizeChange={onContentSizeChange}
     />
   );
 }
 
 // ─── Volume per exercise (line chart) ───────────────────────────────────────────
 // One or more exercises overlaid as lines on a shared kg axis, so they're directly
-// comparable. The x-axis is the union of every logged day across the selected
-// exercises; a line bridges days an exercise wasn't done (the usual line-chart
-// caveat). Uses react-native-svg for real polylines. The chart fits the card width
-// (measured via onLayout) rather than scrolling, so all series show side by side.
+// comparable. The x-axis is the PAIN OVER TIME timeline (every logged day) — passed
+// in as `masterDates` — so a volume point sits at the same x as that day's pain bar,
+// and the two charts scroll in lockstep. A line bridges days an exercise wasn't done
+// (the usual line-chart caveat). Drawn with react-native-svg.
 
-const LINE_PAD = { left: 46, right: 14, top: 10, bottom: 22 };
+const VOL_PAD = { top: 10, bottom: 22 };
 
 // "Nice" rounded y-axis ticks: ~`count` intervals ending on a clean number, so
 // the axis reads 0 / 400 / 800 / 1200 rather than 0 / 1057. Returns the tick
@@ -127,32 +128,28 @@ function niceTicks(max, count) {
   return { ticks, niceMax };
 }
 
-function VolumeLineChart({ seriesList }) {
-  const [width, setWidth] = useState(0);
+function VolumeLineChart({ seriesList, masterDates, scrollRef, scrollHandlers, onContentSizeChange }) {
   const [tip, setTip] = useState(null); // tapped point: { key, x, y, main, sub }
 
-  const allDates = Array.from(
-    new Set(seriesList.flatMap((ser) => ser.points.map((p) => p.date)))
-  ).sort();
-  const maxVol = Math.max(0, ...seriesList.flatMap((ser) => ser.points.map((p) => p.volume)));
+  // Clear the tooltip when the selection changes (axis + coords shift). We no
+  // longer remount the chart on selection, so it stays put / synced with pain.
+  const seriesKey = seriesList.map((ser) => ser.name).join('|');
+  useEffect(() => { setTip(null); }, [seriesKey]);
 
-  if (allDates.length === 0 || maxVol <= 0) {
+  const maxVol = Math.max(0, ...seriesList.flatMap((ser) => ser.points.map((p) => p.volume)));
+  if (masterDates.length === 0 || maxVol <= 0) {
     return (
       <Text style={s.empty}>No weighted volume logged for the selected exercise(s) yet.</Text>
     );
   }
 
-  const plotW = Math.max(1, width - LINE_PAD.left - LINE_PAD.right);
-  const plotH = PLOT_H - LINE_PAD.top - LINE_PAD.bottom;
+  const contentW = masterDates.length * DAY_W;
+  const plotH = PLOT_H - VOL_PAD.top - VOL_PAD.bottom;
   const { ticks, niceMax } = niceTicks(maxVol, 4);
-  const xAt = (date) => {
-    const i = allDates.indexOf(date);
-    return allDates.length === 1
-      ? LINE_PAD.left + plotW / 2
-      : LINE_PAD.left + (i / (allDates.length - 1)) * plotW;
-  };
-  const yAt = (vol) => LINE_PAD.top + (1 - vol / niceMax) * plotH;
-  const xStep = Math.max(1, Math.ceil(allDates.length / X_TICK_TARGET));
+  const indexOf = (date) => masterDates.indexOf(date);
+  const xAt = (date) => indexOf(date) * DAY_W + DAY_W / 2; // same centring as the pain bars
+  const yAt = (vol) => VOL_PAD.top + (1 - vol / niceMax) * plotH;
+  const step = Math.max(3, Math.ceil(masterDates.length / X_TICK_TARGET));
 
   // Tap a point to pin/unpin a tooltip with its value.
   const tapPoint = (ser, p) => {
@@ -170,56 +167,63 @@ function VolumeLineChart({ seriesList }) {
     );
   };
 
-  // Tooltip box, clamped to stay inside the chart width.
+  // Tooltip box, clamped to stay inside the scrollable content width.
   let tipBox = null;
   if (tip) {
     const w = Math.max(tip.main.length, tip.sub.length) * 6 + 14;
     const h = 30;
-    const x = Math.max(2, Math.min(tip.x - w / 2, width - w - 2));
+    const x = Math.max(2, Math.min(tip.x - w / 2, contentW - w - 2));
     const y = tip.y - h - 8 < 0 ? tip.y + 10 : tip.y - h - 8;
     tipBox = { x, y, w, h };
   }
 
   return (
-    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {width > 0 && (
-        <Svg width={width} height={PLOT_H}>
-          {/* horizontal gridlines + y-axis value labels */}
+    <View style={s.plotRow}>
+      {/* fixed y-axis (does not scroll) */}
+      <Svg width={Y_AXIS_W} height={PLOT_H}>
+        {ticks.map((t) => (
+          <SvgText key={t} x={Y_AXIS_W - 6} y={yAt(t) + 3} fontSize="10" fill={C.muted} textAnchor="end">
+            {t}
+          </SvgText>
+        ))}
+      </Svg>
+
+      {/* scrollable plot, locked to the pain chart's scroll position */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        onContentSizeChange={onContentSizeChange}
+        {...scrollHandlers}
+      >
+        <Svg width={contentW} height={PLOT_H}>
+          {/* horizontal gridlines at each y tick */}
           {ticks.map((t) => (
-            <React.Fragment key={t}>
-              <Line
-                x1={LINE_PAD.left}
-                y1={yAt(t)}
-                x2={width - LINE_PAD.right}
-                y2={yAt(t)}
-                stroke={C.inner}
-                strokeWidth="1"
-              />
-              <SvgText x={LINE_PAD.left - 6} y={yAt(t) + 3} fontSize="10" fill={C.muted} textAnchor="end">
-                {t}
-              </SvgText>
-            </React.Fragment>
+            <Line key={t} x1={0} y1={yAt(t)} x2={contentW} y2={yAt(t)} stroke={C.inner} strokeWidth="1" />
           ))}
 
           {/* one polyline (with visible dots) per selected exercise */}
-          {seriesList.map((ser) => (
-            <React.Fragment key={ser.name}>
-              <Polyline
-                points={ser.points.map((p) => `${xAt(p.date)},${yAt(p.volume)}`).join(' ')}
-                fill="none"
-                stroke={ser.color}
-                strokeWidth="2"
-              />
-              {ser.points.map((p) => (
-                <Circle key={p.date} cx={xAt(p.date)} cy={yAt(p.volume)} r="2.5" fill={ser.color} />
-              ))}
-            </React.Fragment>
-          ))}
+          {seriesList.map((ser) => {
+            const pts = ser.points.filter((p) => indexOf(p.date) >= 0);
+            return (
+              <React.Fragment key={ser.name}>
+                <Polyline
+                  points={pts.map((p) => `${xAt(p.date)},${yAt(p.volume)}`).join(' ')}
+                  fill="none"
+                  stroke={ser.color}
+                  strokeWidth="2"
+                />
+                {pts.map((p) => (
+                  <Circle key={p.date} cx={xAt(p.date)} cy={yAt(p.volume)} r="2.5" fill={ser.color} />
+                ))}
+              </React.Fragment>
+            );
+          })}
 
-          {/* sparse x-axis date ticks ("5/6"), always including the latest */}
-          {allDates.map((d, i) =>
-            i % xStep === 0 || i === allDates.length - 1 ? (
-              <SvgText key={d} x={xAt(d)} y={PLOT_H - 6} fontSize="9" fill={C.muted} textAnchor="middle">
+          {/* sparse x-axis date ticks ("5/6") — same dates/positions as the pain chart */}
+          {masterDates.map((d, i) =>
+            i % step === 0 || i === masterDates.length - 1 ? (
+              <SvgText key={d} x={i * DAY_W + DAY_W / 2} y={PLOT_H - 6} fontSize="9" fill={C.muted} textAnchor="middle">
                 {formatDayMonthSlash(d)}
               </SvgText>
             ) : null
@@ -227,16 +231,18 @@ function VolumeLineChart({ seriesList }) {
 
           {/* invisible, larger tap targets over each point */}
           {seriesList.map((ser) =>
-            ser.points.map((p) => (
-              <Circle
-                key={`${ser.name}@${p.date}`}
-                cx={xAt(p.date)}
-                cy={yAt(p.volume)}
-                r="11"
-                fill="transparent"
-                onPress={() => tapPoint(ser, p)}
-              />
-            ))
+            ser.points
+              .filter((p) => indexOf(p.date) >= 0)
+              .map((p) => (
+                <Circle
+                  key={`${ser.name}@${p.date}`}
+                  cx={xAt(p.date)}
+                  cy={yAt(p.volume)}
+                  r="11"
+                  fill="transparent"
+                  onPress={() => tapPoint(ser, p)}
+                />
+              ))
           )}
 
           {/* tooltip for the tapped point */}
@@ -252,7 +258,7 @@ function VolumeLineChart({ seriesList }) {
             </React.Fragment>
           )}
         </Svg>
-      )}
+      </ScrollView>
     </View>
   );
 }
@@ -321,6 +327,11 @@ export default function InsightsScreen() {
   const [symptoms, setSymptoms] = useState([]);
   const [picked, setPicked] = useState([]); // exercises overlaid on the volume chart
 
+  // Pain (master) and volume charts scroll together over the same timeline.
+  const painScrollRef = useRef(null);
+  const volScrollRef = useRef(null);
+  const activeChart = useRef(null); // which chart the user is actively scrolling
+
   useFocusEffect(
     useCallback(() => {
       setSeries(getPainSeries());
@@ -360,13 +371,36 @@ export default function InsightsScreen() {
   const toggleExercise = (name) =>
     setPicked((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
 
+  // Keep the two charts horizontally in lockstep. Only the chart the user is
+  // actively dragging/flinging drives the other; the driven chart's scroll events
+  // are ignored, so the programmatic scrollTo can't bounce back and fight (which
+  // caused the jitter / double image). Begin-drag and momentum-begin fire only for
+  // real user input — never for scrollTo — so the follower never grabs control.
+  const scrollHandlers = (me, other) => ({
+    scrollEventThrottle: 16,
+    onScrollBeginDrag: () => { activeChart.current = me; },
+    onMomentumScrollBegin: () => { activeChart.current = me; },
+    onScrollEndDrag: () => { if (activeChart.current === me) activeChart.current = null; },
+    onMomentumScrollEnd: () => { if (activeChart.current === me) activeChart.current = null; },
+    onScroll: (e) => {
+      if (activeChart.current !== me) return;
+      other.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false });
+    },
+  });
+  const positionToEnd = (ref) => () => ref.current?.scrollToEnd({ animated: false });
+
   return (
     <SafeAreaView style={s.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={s.content}>
         <Card mode="elevated" elevation={2} style={s.card}>
           <Card.Content>
             <Text variant="labelSmall" style={s.section}>PAIN OVER TIME</Text>
-            <PainTimeline series={series} />
+            <PainTimeline
+              series={series}
+              scrollRef={painScrollRef}
+              scrollHandlers={scrollHandlers('pain', volScrollRef)}
+              onContentSizeChange={positionToEnd(painScrollRef)}
+            />
           </Card.Content>
         </Card>
 
@@ -402,7 +436,13 @@ export default function InsightsScreen() {
                   <Text style={s.empty}>Pick at least one exercise above.</Text>
                 ) : (
                   <>
-                    <VolumeLineChart key={selectedNames.join('|')} seriesList={volSeriesList} />
+                    <VolumeLineChart
+                      seriesList={volSeriesList}
+                      masterDates={series.map((p) => p.date)}
+                      scrollRef={volScrollRef}
+                      scrollHandlers={scrollHandlers('vol', painScrollRef)}
+                      onContentSizeChange={positionToEnd(volScrollRef)}
+                    />
                     {volSeriesList.length > 1 && (
                       <View style={s.legend}>
                         {volSeriesList.map((ser) => (
@@ -544,7 +584,7 @@ const s = StyleSheet.create({
   plotRow: { flexDirection: 'row', alignItems: 'flex-start' },
   yAxis: { height: PLOT_H, justifyContent: 'space-between', paddingRight: 4 },
   axisLabel: { color: C.muted, fontSize: 10, textAlign: 'right' },
-  bars: { alignItems: 'flex-start', paddingLeft: 2 },
+  bars: { alignItems: 'flex-start' },
   barSlot: { width: 12, alignItems: 'center', marginHorizontal: 1.5 },
   barBox: { width: 12, height: PLOT_H, justifyContent: 'flex-end' },
   bar: { width: 12, borderRadius: 2 },
