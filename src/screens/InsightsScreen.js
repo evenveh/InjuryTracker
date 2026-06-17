@@ -14,15 +14,11 @@ import {
 import { ACTIVITY_LABEL, ACTIVITY_ICON } from '../components/ActivityList';
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import { C, getPainColor } from '../theme';
+import { formatDayMonth } from '../utils/date';
 
 const MIN_OCCURRENCES = 3; // need this many sessions before showing a signal
 const PLOT_H = 130;
 const GOOD = '#16a34a';
-
-function shortDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-}
 
 // ─── A. Pain over time ─────────────────────────────────────────────────────────
 
@@ -66,7 +62,7 @@ function PainTimeline({ series }) {
         </ScrollView>
       </View>
       <Text style={s.caption}>
-        {shortDate(series[0].date)} → {shortDate(series[series.length - 1].date)} · {series.length} days
+        {formatDayMonth(series[0].date)} → {formatDayMonth(series[series.length - 1].date)} · {series.length} days
       </Text>
     </View>
   );

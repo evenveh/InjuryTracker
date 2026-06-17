@@ -10,6 +10,10 @@ respond to them in Norwegian, but keep all code, UI strings, and identifiers Eng
 
 One goal of this development from the user side is learning. Make sure you teach the user the changes you do and explain why and how elements are tied together.
 
+**Never take a screenshot of the phone unless the user explicitly asks for one.** When
+installing/verifying a build, confirm success via `pidof` + the crash log only — do not
+`screencap`/pull the screen on your own initiative.
+
 ## Tech stack
 
 - **Expo SDK 56** / **React Native 0.85** (bare workflow — `android/` is committed)

@@ -24,46 +24,12 @@ import PainSelector from '../components/PainSelector';
 import SymptomPicker, { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import ActivityList, { ACTIVITY_LABEL } from '../components/ActivityList';
 import { C, getPainColor } from '../theme';
-
-// Local-date key "YYYY-MM-DD". Never use toISOString() for these: it converts
-// to UTC, which in a positive-offset timezone (e.g. CEST = UTC+2) rolls the date
-// back a day — that made "+1 day" cancel out (forward nav did nothing) and
-// "-1 day" jump two days back.
-function toDateStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function todayStr() {
-  return toDateStr(new Date());
-}
-
-function addDays(dateStr, n) {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return toDateStr(d);
-}
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function formatShort(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-}
+import {
+  todayStr,
+  addDays,
+  formatFullDate,
+  formatWeekdayDate,
+} from '../utils/date';
 
 function SectionCard({ title, children, style }) {
   return (
@@ -168,7 +134,7 @@ export default function TodayScreen() {
     updateLog(log.id, { painLevel, notes });
     saveSymptomsForLog(log.id, symptoms);
     setDirty(false);
-    Alert.alert('Saved ✓', isToday ? 'Your log has been updated.' : `Log for ${formatShort(viewDate)} saved.`);
+    Alert.alert('Saved ✓', isToday ? 'Your log has been updated.' : `Log for ${formatWeekdayDate(viewDate)} saved.`);
   };
 
   const mark = (fn) => (...args) => { fn(...args); setDirty(true); };
@@ -196,7 +162,7 @@ export default function TodayScreen() {
                 variant="titleMedium"
                 style={[s.dateHeader, !isToday && { color: C.warn }]}
               >
-                {formatDate(viewDate)}
+                {formatFullDate(viewDate)}
               </Text>
               {!isToday && (
                 <Button
@@ -263,7 +229,7 @@ export default function TodayScreen() {
             <Card mode="contained" style={s.yesterdayCard}>
               <Card.Content>
                 <Text variant="labelSmall" style={s.sectionLabel}>
-                  PREVIOUS DAY · {formatShort(prevDate).toUpperCase()}
+                  PREVIOUS DAY · {formatWeekdayDate(prevDate).toUpperCase()}
                 </Text>
                 <View style={s.yesterdayRow}>
                   <View

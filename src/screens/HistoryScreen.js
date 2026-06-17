@@ -15,16 +15,7 @@ import { getAllLogs, getLogWithDetails } from '../database/db';
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import { ACTIVITY_LABEL, ACTIVITY_ICON } from '../components/ActivityList';
 import { C, getPainColor } from '../theme';
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
+import { formatFullDate } from '../utils/date';
 
 // ─── Detail view ──────────────────────────────────────────────────────────────
 
@@ -47,7 +38,7 @@ function DetailView({ date, onBack, onEdit }) {
       <Appbar.Header style={{ backgroundColor: C.card }}>
         <Appbar.BackAction onPress={onBack} color={C.accent} />
         <Appbar.Content
-          title={formatDate(date)}
+          title={formatFullDate(date)}
           titleStyle={{ fontSize: 17, fontWeight: '700', textTransform: 'capitalize' }}
         />
         <Appbar.Action icon="pencil" onPress={onEdit} color={C.accent} />
@@ -182,7 +173,7 @@ export default function HistoryScreen() {
                     <Text style={l.badgeText}>{item.pain_level}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={l.date}>{formatDate(item.date)}</Text>
+                    <Text style={l.date}>{formatFullDate(item.date)}</Text>
                     {item.notes ? (
                       <Text style={l.preview} numberOfLines={1}>{item.notes}</Text>
                     ) : null}

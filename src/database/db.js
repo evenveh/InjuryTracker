@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { nextDateStr } from '../utils/date';
 
 let _db = null;
 
@@ -343,16 +344,6 @@ export function importBackup(logs) {
 }
 
 // ─── Insights / analytics ─────────────────────────────────────────────────────
-
-// Next calendar day for a YYYY-MM-DD key, built from local date parts (never via
-// toISOString — that would shift across the UTC boundary, see TodayScreen).
-function nextDateStr(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + 1);
-  const mm = String(dt.getMonth() + 1).padStart(2, '0');
-  const dd = String(dt.getDate()).padStart(2, '0');
-  return `${dt.getFullYear()}-${mm}-${dd}`;
-}
 
 // Pain per logged day, oldest first — for the pain-over-time chart.
 export function getPainSeries() {

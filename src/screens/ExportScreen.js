@@ -10,6 +10,7 @@ import { getFullExportData, getMeta, setMeta, importBackup } from '../database/d
 import { SYMPTOM_LABELS } from '../components/SymptomPicker';
 import { ACTIVITY_LABEL } from '../components/ActivityList';
 import { C } from '../theme';
+import { formatWeekday } from '../utils/date';
 
 const SAF = FileSystem.StorageAccessFramework;
 const EXPORT_DIR_KEY = 'export_dir_uri';
@@ -29,8 +30,7 @@ function buildCSV(data) {
   const rows = [headers.map(escape).join(',')];
 
   for (const log of data) {
-    const d = new Date(log.date + 'T00:00:00');
-    const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    const weekday = formatWeekday(log.date);
     const symStr = (log.symptoms || [])
       .map((k) => SYMPTOM_LABELS[k] || k)
       .join('; ');
