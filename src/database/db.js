@@ -459,48 +459,31 @@ export function getExerciseImpact() {
   return { baseline, items };
 }
 
-// Daily training "load" = total activity minutes that day. We bucket each day
-// and show the average NEXT-day pain per bucket — does a harder day cost more
-// the day after?
-const LOAD_BINS = [
-  { label: 'Rest day', test: (v) => v === 0 },
-  { label: 'Light (≤45 min)', test: (v) => v > 0 && v <= 45 },
-  { label: 'Hard (>45 min)', test: (v) => v > 45 },
-];
-
-export function getLoadVsPain() {
-  const db = getDb();
-  const logs = db.getAllSync('SELECT date, pain_level FROM logs');
-  if (logs.length === 0) return { bins: [], baseline: null };
-
-  const painByDate = {};
-  let sum = 0;
-  for (const l of logs) { painByDate[l.date] = l.pain_level; sum += l.pain_level; }
-  const baseline = sum / logs.length;
-
-  // Total minutes per logged day (0 on days with no activities).
-  const loadRows = db.getAllSync(
-    `SELECT l.date AS date, COALESCE(SUM(a.duration_min), 0) AS load
-     FROM logs l LEFT JOIN activities a ON a.log_id = l.id
-     GROUP BY l.date`
+// Daily training volume (volume load = Σ weight_kg × reps) per exercise, oldest
+// day first — for the per-exercise volume chart. Sets are summed per (name, day),
+// so multiple sets / multiple sessions of the same exercise on one day combine.
+// Only weighted work counts as tonnage: a set with no weight logged contributes 0
+// (so a purely bodyweight exercise yields an all-zero series, which the chart
+// treats as "no volume yet"). Returns a map: exercise name → [{ date, volume }].
+export function getExerciseVolumeSeries() {
+  const rows = getDb().getAllSync(
+    `SELECT e.name AS name, l.date AS date,
+            SUM(COALESCE(es.weight_kg, 0) * COALESCE(es.reps, 0)) AS volume
+     FROM exercise_sets es
+     JOIN exercises e   ON es.exercise_id = e.id
+     JOIN activities a  ON e.activity_id  = a.id
+     JOIN logs l        ON a.log_id       = l.id
+     WHERE TRIM(e.name) <> ''
+     GROUP BY e.name, l.date
+     ORDER BY e.name, l.date ASC`
   );
 
-  const acc = LOAD_BINS.map(() => ({ sum: 0, n: 0 }));
-  for (const r of loadRows) {
-    const nd = nextDateStr(r.date);
-    if (painByDate[nd] == null) continue; // need a next-day pain to attribute
-    const idx = LOAD_BINS.findIndex((b) => b.test(r.load));
-    if (idx < 0) continue;
-    acc[idx].sum += painByDate[nd];
-    acc[idx].n += 1;
+  const byName = {};
+  for (const r of rows) {
+    if (!byName[r.name]) byName[r.name] = [];
+    byName[r.name].push({ date: r.date, volume: r.volume });
   }
-
-  const bins = LOAD_BINS.map((b, i) => ({
-    label: b.label,
-    n: acc[i].n,
-    avgNextPain: acc[i].n ? acc[i].sum / acc[i].n : null,
-  }));
-  return { bins, baseline };
+  return byName;
 }
 
 // How often each symptom occurs and the average pain on those days,

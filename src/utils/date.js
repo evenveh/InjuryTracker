@@ -79,6 +79,13 @@ export function formatDayMonth(dateStr) {
   });
 }
 
+// "5/6" — compact day/month for chart x-axis ticks where space is tight. Built
+// straight from the key parts (no leading zeros), so 2026-06-05 → "5/6".
+export function formatDayMonthSlash(dateStr) {
+  const [, m, d] = dateStr.split('-').map(Number);
+  return `${d}/${m}`;
+}
+
 // "Monday"
 export function formatWeekday(dateStr) {
   return atLocalMidnight(dateStr).toLocaleDateString('en-GB', { weekday: 'long' });
