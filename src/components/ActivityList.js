@@ -18,6 +18,7 @@ import {
   Modal,
   Divider,
   TouchableRipple,
+  Snackbar,
 } from 'react-native-paper';
 import {
   createActivity,
@@ -123,6 +124,13 @@ function AddModal({ visible, editActivity, onClose, onFlush }) {
   // Pending debounced-autosave timer, so we can cancel it when the sheet closes.
   const saveTimer = useRef(null);
 
+  // The last exercise/set the user removed, kept so the "Undo" snackbar can put
+  // it back at the exact spot. Cleared when the snackbar dismisses. Deleting is
+  // now persisted by autosave within ~500 ms, so this undo is the safety net
+  // against an accidental tap on the (small, finger-sized) delete buttons.
+  const [undoItem, setUndoItem] = useState(null);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+
   // When the sheet opens: load known names, and either prefill from the activity
   // being edited or start blank for a new one. This is also our *only* place that
   // clears the form — we deliberately do NOT reset on close, because resetting
@@ -204,6 +212,10 @@ function AddModal({ visible, editActivity, onClose, onFlush }) {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
+    // Hide the undo snackbar too — it lives in the same Portal and would
+    // otherwise linger on screen after the sheet is gone (AddModal stays mounted).
+    setSnackbarVisible(false);
+    setUndoItem(null);
     onFlush(buildPayload());
     onClose();
   };
@@ -221,7 +233,10 @@ function AddModal({ visible, editActivity, onClose, onFlush }) {
       )
     );
 
-  const removeSet = (exIdx, setIdx) =>
+  const removeSet = (exIdx, setIdx) => {
+    // Capture the set (and where it was) before removing, so Undo can restore it.
+    setUndoItem({ kind: 'set', exIdx, setIdx, set: exercises[exIdx].sets[setIdx] });
+    setSnackbarVisible(true);
     setExercises((prev) =>
       prev.map((ex, i) =>
         i === exIdx
@@ -229,6 +244,7 @@ function AddModal({ visible, editActivity, onClose, onFlush }) {
           : ex
       )
     );
+  };
 
   const editSet = (exIdx, setIdx, field, val) =>
     setExercises((prev) =>
@@ -244,8 +260,35 @@ function AddModal({ visible, editActivity, onClose, onFlush }) {
       )
     );
 
-  const removeExercise = (i) =>
+  const removeExercise = (i) => {
+    setUndoItem({ kind: 'exercise', index: i, exercise: exercises[i] });
+    setSnackbarVisible(true);
     setExercises((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  // Put the last-removed exercise/set back where it was. State changes again, so
+  // autosave re-persists the restored workout automatically.
+  const undoDelete = () => {
+    if (!undoItem) return;
+    if (undoItem.kind === 'exercise') {
+      setExercises((prev) => {
+        const next = [...prev];
+        next.splice(undoItem.index, 0, undoItem.exercise);
+        return next;
+      });
+    } else {
+      setExercises((prev) =>
+        prev.map((ex, i) => {
+          if (i !== undoItem.exIdx) return ex;
+          const sets = [...ex.sets];
+          sets.splice(undoItem.setIdx, 0, undoItem.set);
+          return { ...ex, sets };
+        })
+      );
+    }
+    setUndoItem(null);
+    setSnackbarVisible(false);
+  };
 
   return (
     <Portal>
@@ -452,6 +495,20 @@ function AddModal({ visible, editActivity, onClose, onFlush }) {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Undo for the no-confirm exercise/set delete buttons. Rendered as a
+          sibling of the Modal (later in the same Portal) so it floats above the
+          sheet at the bottom of the screen. */}
+      <Snackbar
+        visible={snackbarVisible}
+        // Keep `undoItem` set during the fade-out so the message doesn't flip;
+        // it's harmless to leave until the next delete overwrites it.
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={4000}
+        action={{ label: 'Undo', onPress: undoDelete }}
+      >
+        {undoItem?.kind === 'exercise' ? 'Exercise removed' : 'Set removed'}
+      </Snackbar>
     </Portal>
   );
 }
