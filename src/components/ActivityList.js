@@ -48,6 +48,16 @@ const DISTANCE_TYPES = new Set(
   ACTIVITY_TYPES.filter((t) => t.distance).map((t) => t.key)
 );
 
+// Parse a decimal the user typed, accepting BOTH comma and period as the
+// decimal separator. JS parseFloat only understands "72.5"; a Norwegian
+// decimal-pad keyboard emits a comma ("72,5"), which plain parseFloat would
+// silently truncate to 72. Normalise comma → period first so both read alike.
+// Returns null for blank/unparseable input.
+const parseDecimal = (text) => {
+  const n = parseFloat(String(text).replace(',', '.'));
+  return Number.isNaN(n) ? null : n;
+};
+
 export const ACTIVITY_LABEL = Object.fromEntries(
   ACTIVITY_TYPES.map(({ key, label }) => [key, label])
 );
@@ -162,7 +172,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
     onSaved({
       type,
       durationMin: duration ? parseInt(duration, 10) : null,
-      distanceKm: DISTANCE_TYPES.has(type) && distance ? parseFloat(distance) : null,
+      distanceKm: DISTANCE_TYPES.has(type) && distance ? parseDecimal(distance) : null,
       notes,
       exercises: type === 'styrke' ? exercises : [],
     });
@@ -393,7 +403,9 @@ export default function ActivityList({ activities, logId, onChange }) {
       if (!ex.name.trim()) return;
       const exId = createExercise(actId, ex.name.trim(), exIdx);
       ex.sets.forEach((s, si) => {
-        const w = parseFloat(s.weight) || null;
+        // `|| null` keeps the old behaviour: an explicit 0 means "bodyweight",
+        // stored as NULL (same as a blank weight), not 0 kg.
+        const w = parseDecimal(s.weight) || null;
         const r = parseInt(s.reps, 10) || null;
         if (w !== null || r !== null) createExerciseSet(exId, si + 1, w, r);
       });
