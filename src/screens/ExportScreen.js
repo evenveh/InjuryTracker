@@ -316,10 +316,8 @@ export default function ExportScreen() {
               <Text variant="titleSmall" style={s.infoTitle}>About data storage</Text>
             </View>
             <Text style={s.infoText}>
-              All data is stored exclusively on your phone via SQLite.
-              No data is sent to the internet. History is not deleted on app
-              updates. Take regular backups to protect your data against
-              uninstalling the app.
+              All data is stored exclusively on your phone.
+              No data is sent to the internet. It is recommended to take regular backups to protect your data..
             </Text>
           </Card.Content>
         </Card>
