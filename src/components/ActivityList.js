@@ -66,6 +66,46 @@ export const ACTIVITY_ICON = Object.fromEntries(
   ACTIVITY_TYPES.map(({ key, icon }) => [key, icon])
 );
 
+// ─── Caret-stable text input ────────────────────────────────────────────────────
+//
+// A drop-in wrapper around Paper's TextInput that stops the caret from jumping
+// backwards while you edit existing text.
+//
+// Why it's needed: every field below is *controlled* — its `value` comes from
+// React state that lives up in AddModal. On Android, RN only leaves the native
+// caret alone when the `value` it re-applies is exactly what's already on screen.
+// A keystroke re-renders the whole (heavy) form, and if the new `value` arrives a
+// frame late, RN reprograms the native text and drops the caret at a default
+// spot — i.e. it "jumps back". You only notice it when the caret was mid-text
+// (e.g. capitalising the last word), which is why blank fields feel fine.
+//
+// The fix: each field owns its text *locally*, so the value handed to the native
+// input is always exactly what was just typed (set synchronously in onChangeText).
+// A heavy parent re-render can no longer feed back a stale value. We only adopt
+// the parent's `value` when it changes for an outside reason — tapping a name
+// suggestion, or loading a saved day to edit.
+function StableTextInput({ value, onChangeText, ...props }) {
+  const [text, setText] = useState(value ?? '');
+
+  useEffect(() => {
+    // After a keystroke, `value` has already caught up to `text`, so this is a
+    // no-op and the caret stays put. It only fires on genuine outside changes.
+    if ((value ?? '') !== text) setText(value ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <TextInput
+      {...props}
+      value={text}
+      onChangeText={(t) => {
+        setText(t);
+        onChangeText?.(t);
+      }}
+    />
+  );
+}
+
 // ─── Add-activity modal ────────────────────────────────────────────────────────
 
 function AddModal({ visible, editActivity, onClose, onSaved }) {
@@ -220,7 +260,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
 
             {/* Duration */}
             {type && (
-              <TextInput
+              <StableTextInput
                 mode="outlined"
                 label="Duration (min)"
                 style={m.input}
@@ -234,7 +274,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
 
             {/* Distance — only for distance-based activity types */}
             {type && DISTANCE_TYPES.has(type) && (
-              <TextInput
+              <StableTextInput
                 mode="outlined"
                 label="Distance (km)"
                 style={m.input}
@@ -254,7 +294,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
                   <Card key={exIdx} mode="contained" style={m.exCard}>
                     <Card.Content>
                       <View style={m.exNameRow}>
-                        <TextInput
+                        <StableTextInput
                           mode="outlined"
                           label="Exercise"
                           style={{ flex: 1 }}
@@ -306,7 +346,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
                       {ex.sets.map((s, si) => (
                         <View key={si} style={m.setsRow}>
                           <Text style={[m.setCell, { color: C.muted }]}>{si + 1}</Text>
-                          <TextInput
+                          <StableTextInput
                             mode="outlined"
                             style={[m.setInput, m.setCell]}
                             value={s.weight}
@@ -315,7 +355,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
                             placeholder="0"
                             dense
                           />
-                          <TextInput
+                          <StableTextInput
                             mode="outlined"
                             style={[m.setInput, m.setCell]}
                             value={s.reps}
@@ -359,7 +399,7 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
 
             {/* Notes */}
             {type && (
-              <TextInput
+              <StableTextInput
                 mode="outlined"
                 label="Notes"
                 style={m.input}
