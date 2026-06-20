@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -21,11 +21,11 @@ import {
 } from 'react-native-paper';
 import {
   createActivity,
-  createExercise,
-  createExerciseSet,
   removeActivity,
   updateActivity,
   deleteExercisesForActivity,
+  replaceActivityExercises,
+  deleteActivityIfEmpty,
   getExerciseNames,
 } from '../database/db';
 import { C, RADIUS } from '../theme';
@@ -108,7 +108,7 @@ function StableTextInput({ value, onChangeText, ...props }) {
 
 // ─── Add-activity modal ────────────────────────────────────────────────────────
 
-function AddModal({ visible, editActivity, onClose, onSaved }) {
+function AddModal({ visible, editActivity, onClose, onFlush }) {
   const [type, setType] = useState(null);
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
@@ -120,9 +120,16 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
   const [knownNames, setKnownNames] = useState([]);
   const [focusedEx, setFocusedEx] = useState(null);
 
+  // Pending debounced-autosave timer, so we can cancel it when the sheet closes.
+  const saveTimer = useRef(null);
+
   // When the sheet opens: load known names, and either prefill from the activity
-  // being edited or start blank for a new one.
-  useEffect(() => {
+  // being edited or start blank for a new one. This is also our *only* place that
+  // clears the form — we deliberately do NOT reset on close, because resetting
+  // while the modal is still animating out makes its content visibly collapse
+  // (everything is gated on `type`). useLayoutEffect runs before the first paint,
+  // so opening shows the right content with no flash.
+  useLayoutEffect(() => {
     if (!visible) return;
     setKnownNames(getExerciseNames());
     if (editActivity) {
@@ -158,15 +165,48 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
       .slice(0, 5);
   };
 
-  const reset = () => {
-    setType(null);
-    setDuration('');
-    setDistance('');
-    setNotes('');
-    setExercises([]);
-  };
+  // Snapshot of the current form, in the shape ActivityList.flush expects.
+  // Exercises stay as raw form strings; flush() parses them.
+  const buildPayload = () => ({
+    type,
+    durationMin: duration ? parseInt(duration, 10) : null,
+    distanceKm: DISTANCE_TYPES.has(type) && distance ? parseDecimal(distance) : null,
+    notes,
+    exercises: type === 'styrke' ? exercises : [],
+  });
 
-  const close = () => { reset(); onClose(); };
+  // Autosave: ~500 ms after the user stops changing the form, persist it. Each
+  // change reschedules the timer (classic debounce), so we write once per pause
+  // instead of on every keystroke. This is what makes the workout survive even
+  // if the sheet is dismissed — there's a saved copy in the database within half
+  // a second of any edit. flush() no-ops until a type is chosen.
+  useEffect(() => {
+    if (!visible) return;
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      onFlush(buildPayload());
+    }, 500);
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, type, duration, distance, notes, exercises]);
+
+  const close = () => {
+    // Cancel any pending debounce and do one final synchronous flush, so closing
+    // by any means (outside tap, back button, X) keeps the latest edits. We do
+    // NOT clear the form here — that happens on the next open (see the layout
+    // effect above) so the content doesn't collapse mid-close-animation.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    onFlush(buildPayload());
+    onClose();
+  };
 
   const addExercise = () =>
     setExercises((prev) => [...prev, { name: '', sets: [{ weight: '', reps: '' }] }]);
@@ -206,18 +246,6 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
 
   const removeExercise = (i) =>
     setExercises((prev) => prev.filter((_, idx) => idx !== i));
-
-  const handleSave = () => {
-    if (!type) { Alert.alert('Select an activity type'); return; }
-    onSaved({
-      type,
-      durationMin: duration ? parseInt(duration, 10) : null,
-      distanceKm: DISTANCE_TYPES.has(type) && distance ? parseDecimal(distance) : null,
-      notes,
-      exercises: type === 'styrke' ? exercises : [],
-    });
-    close();
-  };
 
   return (
     <Portal>
@@ -414,11 +442,11 @@ function AddModal({ visible, editActivity, onClose, onSaved }) {
               <Button
                 mode="contained"
                 icon="check"
-                onPress={handleSave}
+                onPress={close}
                 style={m.saveBtn}
                 contentStyle={{ paddingVertical: 6 }}
               >
-                {editActivity ? 'Save changes' : 'Save activity'}
+                Done
               </Button>
             )}
           </ScrollView>
@@ -434,34 +462,65 @@ export default function ActivityList({ activities, logId, onChange }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null); // activity being edited, or null
 
-  const openCreate = () => { setEditTarget(null); setModalOpen(true); };
-  const openEdit = (act) => { setEditTarget(act); setModalOpen(true); };
+  // The activity row the open sheet writes to. Created lazily on the first flush
+  // of a *new* activity; for an edit it's the existing row's id. A ref (not
+  // state) so autosave can read/write it without forcing re-renders.
+  const currentActivityIdRef = useRef(null);
 
-  // Insert the strength exercises/sets from the form under a given activity id.
-  const insertExercises = (actId, exercises) => {
-    exercises.forEach((ex, exIdx) => {
-      if (!ex.name.trim()) return;
-      const exId = createExercise(actId, ex.name.trim(), exIdx);
-      ex.sets.forEach((s, si) => {
-        // `|| null` keeps the old behaviour: an explicit 0 means "bodyweight",
-        // stored as NULL (same as a blank weight), not 0 kg.
-        const w = parseDecimal(s.weight) || null;
-        const r = parseInt(s.reps, 10) || null;
-        if (w !== null || r !== null) createExerciseSet(exId, si + 1, w, r);
-      });
-    });
+  const openCreate = () => {
+    setEditTarget(null);
+    currentActivityIdRef.current = null;
+    setModalOpen(true);
+  };
+  const openEdit = (act) => {
+    setEditTarget(act);
+    currentActivityIdRef.current = null;
+    setModalOpen(true);
   };
 
-  const handleSaved = ({ type, durationMin, distanceKm, notes, exercises }) => {
-    if (editTarget) {
-      // Update the row, then replace its exercises/sets wholesale.
-      updateActivity(editTarget.id, { type, durationMin, distanceKm, notes });
-      deleteExercisesForActivity(editTarget.id);
-      if (type === 'styrke') insertExercises(editTarget.id, exercises);
+  // Parse the form's string weight/reps into numbers (0 → null = bodyweight),
+  // matching the old insert behaviour. Shape: [{ name, sets: [{ weightKg, reps }] }].
+  const parseExercises = (exercises) =>
+    exercises.map((ex) => ({
+      name: ex.name,
+      sets: (ex.sets || []).map((s) => ({
+        weightKg: parseDecimal(s.weight) || null,
+        reps: parseInt(s.reps, 10) || null,
+      })),
+    }));
+
+  // Autosave flush from the sheet: write the current form to the database. Runs
+  // (debounced) on every change and once synchronously when the sheet closes, so
+  // a workout can never be lost by dismissing the sheet. The activity row is
+  // created on the first flush that has a type; later flushes update that row.
+  const flush = (payload) => {
+    if (!payload.type) return; // no type chosen yet → nothing meaningful to save
+    let id = currentActivityIdRef.current;
+    if (id == null) {
+      if (editTarget) {
+        id = editTarget.id;
+        updateActivity(id, payload);
+      } else {
+        id = createActivity(logId, payload);
+      }
+      currentActivityIdRef.current = id;
     } else {
-      const actId = createActivity(logId, { type, durationMin, distanceKm, notes });
-      if (type === 'styrke') insertExercises(actId, exercises);
+      updateActivity(id, payload);
     }
+    if (payload.type === 'styrke') {
+      replaceActivityExercises(id, parseExercises(payload.exercises));
+    } else {
+      // Type changed away from strength → drop any leftover exercises.
+      deleteExercisesForActivity(id);
+    }
+  };
+
+  // Sheet closed (any way): drop the row if the user left it empty, then refresh
+  // the list so the day reflects whatever was autosaved.
+  const handleClose = () => {
+    deleteActivityIfEmpty(currentActivityIdRef.current);
+    currentActivityIdRef.current = null;
+    setModalOpen(false);
     onChange();
   };
 
@@ -541,8 +600,8 @@ export default function ActivityList({ activities, logId, onChange }) {
       <AddModal
         visible={modalOpen}
         editActivity={editTarget}
-        onClose={() => setModalOpen(false)}
-        onSaved={handleSaved}
+        onClose={handleClose}
+        onFlush={flush}
       />
     </View>
   );

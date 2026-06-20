@@ -210,6 +210,27 @@ export function removeActivity(activityId) {
   getDb().runSync('DELETE FROM activities WHERE id = ?', [activityId]);
 }
 
+// Deletes an activity only if nothing meaningful was entered — no named exercise,
+// no duration, no distance, and empty notes. Mirrors `deleteLogIfEmpty`: with
+// autosave the activity row is created the instant a type is picked, so this
+// cleans up a row the user started (tapped a type) but then abandoned.
+export function deleteActivityIfEmpty(activityId) {
+  if (activityId == null) return;
+  const db = getDb();
+  const act = db.getFirstSync('SELECT * FROM activities WHERE id = ?', [activityId]);
+  if (!act) return;
+  if (act.duration_min != null || act.distance_km != null) return;
+  if (act.notes && act.notes.trim() !== '') return;
+  if (
+    db.getFirstSync(
+      "SELECT 1 FROM exercises WHERE activity_id = ? AND TRIM(name) <> '' LIMIT 1",
+      [activityId]
+    )
+  )
+    return;
+  db.runSync('DELETE FROM activities WHERE id = ?', [activityId]);
+}
+
 export function updateActivity(activityId, { type, durationMin, distanceKm, notes }) {
   getDb().runSync(
     'UPDATE activities SET type = ?, duration_min = ?, distance_km = ?, notes = ? WHERE id = ?',
@@ -222,6 +243,29 @@ export function updateActivity(activityId, { type, durationMin, distanceKm, note
 // exercises/sets and re-insert from the edited form.
 export function deleteExercisesForActivity(activityId) {
   getDb().runSync('DELETE FROM exercises WHERE activity_id = ?', [activityId]);
+}
+
+// Atomically replaces an activity's exercises/sets with the given list. Used by
+// the autosave flush: wiping and re-inserting on every change is simple and
+// correct, and wrapping it in a single transaction means a flush either fully
+// applies or not at all — an interrupted write can't leave half an exercise
+// behind. `exercises` is already parsed: [{ name, sets: [{ weightKg, reps }] }]
+// with numeric (or null) weight/reps. Exercises with a blank name are skipped,
+// and a set is only stored if it has a weight or reps (matches insert behaviour).
+export function replaceActivityExercises(activityId, exercises) {
+  const db = getDb();
+  db.withTransactionSync(() => {
+    db.runSync('DELETE FROM exercises WHERE activity_id = ?', [activityId]);
+    exercises.forEach((ex, exIdx) => {
+      if (!ex.name || !ex.name.trim()) return;
+      const exId = createExercise(activityId, ex.name.trim(), exIdx);
+      (ex.sets || []).forEach((s, si) => {
+        if (s.weightKg != null || s.reps != null) {
+          createExerciseSet(exId, si + 1, s.weightKg, s.reps);
+        }
+      });
+    });
+  });
 }
 
 // ─── Exercises ────────────────────────────────────────────────────────────────
