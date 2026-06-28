@@ -3,12 +3,11 @@ import {
   View,
   ScrollView,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, Card, Button, TextInput, IconButton } from 'react-native-paper';
+import { Text, Card, Button, TextInput, IconButton, Icon } from 'react-native-paper';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 
 import {
@@ -56,7 +55,6 @@ export default function TodayScreen() {
   const [symptoms, setSymptoms] = useState([]);
   const [activities, setActivities] = useState([]);
   const [prevLog, setPrevLog] = useState(null);
-  const [dirty, setDirty] = useState(false);
 
   const today = todayStr();
   const isToday = viewDate === today;
@@ -70,7 +68,6 @@ export default function TodayScreen() {
     setNotes(l.notes || '');
     setSymptoms(getSymptomsForLog(l.id));
     setActivities(getActivitiesForLog(l.id));
-    setDirty(false);
     setPrevLog(getLogWithDetails(addDays(date, -1)));
   }, []);
 
@@ -108,36 +105,32 @@ export default function TodayScreen() {
     loadDay(date);
   };
 
-  const goToDate = (date) => {
-    if (dirty) {
-      Alert.alert(
-        'Unsaved changes',
-        'Leave this day without saving?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Leave', style: 'destructive', onPress: () => switchTo(date) },
-        ]
-      );
-      return;
-    }
-    switchTo(date);
-  };
+  // Everything autosaves, so navigating is just a switch (switchTo cleans up the
+  // day we leave if it ended up empty).
+  const goToDate = (date) => switchTo(date);
 
   const refreshActivities = () => {
     if (!log) return;
     setActivities(getActivitiesForLog(log.id));
-    setDirty(true);
   };
 
-  const handleSave = () => {
-    if (!log) return;
-    updateLog(log.id, { painLevel, notes });
-    saveSymptomsForLog(log.id, symptoms);
-    setDirty(false);
-    Alert.alert('Saved ✓', isToday ? 'Your log has been updated.' : `Log for ${formatWeekdayDate(viewDate)} saved.`);
+  // Autosave: write each change to SQLite immediately, so nothing depends on
+  // remembering to press a button. Pain and symptoms are discrete taps; notes
+  // write per keystroke (cheap for local SQLite, and the value stays controlled
+  // so the caret doesn't jump). Each handler reads the other fields from the
+  // current render's state, so the row written always has the latest values.
+  const changePain = (val) => {
+    setPainLevel(val);
+    if (log) updateLog(log.id, { painLevel: val, notes });
   };
-
-  const mark = (fn) => (...args) => { fn(...args); setDirty(true); };
+  const changeNotes = (text) => {
+    setNotes(text);
+    if (log) updateLog(log.id, { painLevel, notes: text });
+  };
+  const changeSymptoms = (next) => {
+    setSymptoms(next);
+    if (log) saveSymptomsForLog(log.id, next);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -185,11 +178,11 @@ export default function TodayScreen() {
           </View>
 
           <SectionCard title="PAIN">
-            <PainSelector value={painLevel} onChange={mark(setPainLevel)} />
+            <PainSelector value={painLevel} onChange={changePain} />
           </SectionCard>
 
           <SectionCard title="SYMPTOMS">
-            <SymptomPicker selected={symptoms} onChange={mark(setSymptoms)} />
+            <SymptomPicker selected={symptoms} onChange={changeSymptoms} />
           </SectionCard>
 
           <SectionCard title="ACTIVITIES">
@@ -207,22 +200,16 @@ export default function TodayScreen() {
               mode="outlined"
               style={s.notes}
               value={notes}
-              onChangeText={mark(setNotes)}
+              onChangeText={changeNotes}
               placeholder="Write notes here…"
               multiline
             />
           </SectionCard>
 
-          <Button
-            mode="contained"
-            icon={dirty ? 'content-save' : 'check'}
-            onPress={handleSave}
-            disabled={!dirty}
-            style={s.saveBtn}
-            contentStyle={{ paddingVertical: 6 }}
-          >
-            {dirty ? 'Save changes' : 'Saved'}
-          </Button>
+          <View style={s.savedRow}>
+            <Icon source="check-circle" size={16} color={C.accent} />
+            <Text style={s.savedText}>Saved automatically</Text>
+          </View>
 
           {/* Previous-day context */}
           {prevLog && (
@@ -296,7 +283,8 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   notes: { backgroundColor: C.inner, minHeight: 80 },
-  saveBtn: { marginBottom: 16, borderRadius: 12 },
+  savedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16 },
+  savedText: { color: C.muted, fontSize: 13 },
   yesterdayCard: { backgroundColor: C.inner, opacity: 0.92 },
   yesterdayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   painDot: {
